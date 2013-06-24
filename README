@@ -1,0 +1,9 @@
+Name:       rechord
+Version:    0.1
+Author:     Philip Kranz <philip.kranz@googlemail.com>
+
+Synopsis:
+    Produces a pretty PDF chord sheet from a ChordPro-like text file.
+
+Usage:
+    rechord <inputfile.cho> <outputfile.pdf>
