@@ -24,8 +24,8 @@ Input format
 The input format is a variant of the ChordPro format. Essentially, it
 looks like this:
 
-`[F]Raindrops keep falling on my [Fmaj7]head.  
-And [F7]just like the guy whose feet are [Bb]too big for his [Am]head`
+`[F]Raindrops keep falling on my [Fmaj7]head.`  
+`And [F7]just like the guy whose feet are [Bb]too big for his [Am]head`
 
 So, basically, it's just lines of lyrics with chords written in brackets.
 
@@ -34,10 +34,10 @@ So, basically, it's just lines of lyrics with chords written in brackets.
 Annotations are denoted with angle brackets. They can be placed anywhere
 in the song and will be printed in a distinct style. Example:
 
-`<BRIDGE>  
-But there's one [F]thing I [Fmaj7]know  
-The [Bb]blues they send to [C]meet me won't de[Am]feat me  
-It won't be long till [D7]happiness steps [Gm7]up to greet me <Instrumental Break>`
+`<BRIDGE>`  
+`But there's one [F]thing I [Fmaj7]know`  
+`The [Bb]blues they send to [C]meet me won't de[Am]feat me`  
+`It won't be long till [D7]happiness steps [Gm7]up to greet me <Instrumental Break>`
 
 ### Directives
 
