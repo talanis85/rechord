@@ -1,51 +1,13 @@
 module Text.ChordPro
-    ( Chord (chordPitch, chordType)
-    , Pitch (Pitch)
-    , PitchBase (A, B, C, D, E, F, G)
-    , PitchMod (Natural, Sharp, Flat)
-    , Chunk, Line, Paragraph, Markup (NormalMarkup, TitleMarkup)
-    , parseChordPro
+    ( parseChordPro
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
+import Data.ChordPro
 import qualified Data.Map as M
-
-data Chord = Chord
-    { chordPitch :: Pitch
-    , chordType :: String
-    }
-
-instance Show Chord where
-    show (Chord p t) = (show p) ++ t
-
-data Pitch = Pitch PitchBase PitchMod
-
-instance Show Pitch where
-    show (Pitch b m) = (show b) ++ (show m)
-
-data PitchBase = A | B | C | D | E | F | G
-    deriving (Show)
-data PitchMod = Natural | Sharp | Flat
-
-instance Show PitchMod where
-    show Natural = ""
-    show Sharp = "#"
-    show Flat = "b"
-
-type Paragraph = [Line]
-type Line = [Chunk]
-type Chunk = (Maybe Chord, Maybe Markup)
-data Markup = NormalMarkup String | TitleMarkup String
-    deriving (Show)
-
-type Option = (String, String)
-
 
 
 parseChordPro input = parse cpFile "" input
-
-
-
 
 cpFile = do
     options <- many sheetOption
@@ -107,9 +69,14 @@ chord = do
     char '['
     base <- chordBase
     modifier <- chordMod
-    chordType <- many (noneOf "\n]")
+    chordType <- many (noneOf "/\n]")
+    slash <- option Nothing $ do
+                              char '/'
+                              base <- chordBase
+                              modifier <- chordMod
+                              return $ Just $ Pitch base modifier
     char ']'
-    return $ Chord (Pitch base modifier) chordType
+    return $ Chord (Pitch base modifier) chordType slash
 
 chordBase = do
     n <- oneOf "ABCDEFG"

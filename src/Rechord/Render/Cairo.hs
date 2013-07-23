@@ -2,12 +2,13 @@ module Rechord.Render.Cairo
     ( renderCairoPDF
     , defaultLayoutConfig
     , paperSizeA4
+    , LayoutConfig (LayoutConfig)
     , FontWeight (FontWeightNormal, FontWeightBold)
     , FontSlant (FontSlantNormal, FontSlantItalic, FontSlantOblique)
     ) where
 
 import Graphics.Rendering.Cairo
-import Text.ChordPro
+import Data.ChordPro
 import Control.Monad (forM_)
 
 paperSizeA4 = (595.0, 842.0)
