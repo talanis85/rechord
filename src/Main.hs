@@ -63,7 +63,10 @@ main = do
 
     f <- readFile infile
     case parseChordPro f of
-        Right (o, p) -> renderCairoPDF defaultLayoutConfig paperSizeA4 outfile (M.findWithDefault "NO TITLE" "t" o) $ 
-                            transpose (optTranspose opts) p
+        Right (o, p) -> let transposition = if optTranspose opts == 0
+                                            then (read $ M.findWithDefault "0" "tp" o)
+                                            else optTranspose opts
+                        in renderCairoPDF defaultLayoutConfig paperSizeA4 outfile (M.findWithDefault "NO TITLE" "t" o) $ 
+                            transpose transposition p
         Left e -> error $ "Error parsing: " ++ (show e)
 
