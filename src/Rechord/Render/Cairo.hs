@@ -9,6 +9,7 @@ module Rechord.Render.Cairo
 
 import Graphics.Rendering.Cairo
 import Data.ChordPro
+import Data.Music.Tonal
 import Control.Monad (forM_)
 
 paperSizeA4 = (595.0, 842.0)
@@ -21,7 +22,7 @@ setFont font = do
     setFontSize (fontSize $ font)
     setSourceRGB `ap3` (fontColor $ font)
 
-renderChord :: LayoutConfig -> Chord -> Render (Double)
+renderChord :: LayoutConfig -> TonalChord -> Render (Double)
 renderChord cfg chord = do
     setFont (chordFont $ cfg)
     textPath (show chord)
@@ -48,16 +49,16 @@ renderChunk :: LayoutConfig -> Double -> Chunk -> Render (Double, Double)
 renderChunk cfg lineSize chunk = do
     save
     (w, h) <- case chunk of
-        (Nothing, Nothing) -> return (0.0, 0.0)
-        (Just chord, Nothing) -> do
+        ChunkEmpty -> return (0.0, 0.0)
+        ChunkChord chord -> do
             translate 0.0 (fontSize $ chordFont cfg)
             w <- renderChord cfg chord
             return (max (minChunkWidth cfg) w, (fontSize $ chordFont cfg))
-        (Nothing, Just markup) -> do
+        ChunkMarkup markup -> do
             translate 0.0 lineSize
             w <- renderMarkup cfg markup
             return (w, (fontSize $ lyricsFont cfg))
-        (Just chord, Just markup) -> do
+        ChunkBoth chord markup -> do
             translate 0.0 (fontSize $ chordFont cfg)
             w1 <- renderChord cfg chord
             translate 0.0 ((chordSpacing cfg) + (fontSize $ lyricsFont cfg))
@@ -156,7 +157,7 @@ defaultLayoutConfig = LayoutConfig
     , lineSpacing = 6.0
     , chordSpacing = 3.0
     , paragraphSpacing = 20.0
-    , chunkSpacing = 0.0
+    , chunkSpacing = 3.0 
     , minChunkWidth = 40.0
     , pageMargin = 60.0
     , titleSpacing = 15.0
@@ -164,10 +165,10 @@ defaultLayoutConfig = LayoutConfig
 
 chunkSize :: LayoutConfig -> Chunk -> Double
 chunkSize cfg c = case c of
-    (Nothing, Nothing)        -> 0.0
-    (Just chord, Nothing)     -> fontSize $ chordFont cfg
-    (Nothing, Just lyrics)    -> fontSize $ lyricsFont cfg
-    (Just chord, Just lyrics) -> (fontSize $ chordFont cfg) + (fontSize $ lyricsFont cfg) + (chordSpacing cfg)
+    ChunkEmpty             -> 0.0
+    ChunkChord chord       -> fontSize $ chordFont cfg
+    ChunkMarkup lyrics     -> fontSize $ lyricsFont cfg
+    ChunkBoth chord lyrics -> (fontSize $ chordFont cfg) + (fontSize $ lyricsFont cfg) + (chordSpacing cfg)
 
 lineSize :: LayoutConfig -> Line -> Double
 lineSize cfg l = maximum $ map (chunkSize cfg) l
