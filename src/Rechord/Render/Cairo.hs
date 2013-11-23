@@ -189,7 +189,9 @@ splitParagraph cfg p size = splitParagraph' cfg p size []
 paginate :: LayoutConfig -> [Double] -> [Paragraph] -> [[Paragraph]]
 paginate cfg sizes paragraphs = paginate' cfg paragraphs sizes []
     where
-        paginate' _ [] _ cur = [cur]
+        paginate' _ [] _ cur = case cur of
+                                [] -> []
+                                x  -> [x]
         paginate' _ _ [] cur = [cur]
         paginate' cfg (p:ps) (size:sizes) currentPage =
             let paragraphsize = paragraphSize cfg p

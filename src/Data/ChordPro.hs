@@ -20,6 +20,7 @@ data Chunk' = ChunkBoth' DegreeChord Markup
            | ChunkChord' DegreeChord
            | ChunkMarkup' Markup
            | ChunkEmpty'
+    deriving (Show)
 
 type Paragraph = [Line]
 type Line = [Chunk]
