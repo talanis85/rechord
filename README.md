@@ -8,7 +8,7 @@ ChordPro-like text files.
 
 Usage:
 
-`rechord <inputfile.cho> <outputfile.pdf>`
+`rechord [-k <key>] [-t <transposition>] -i <inputfile.cho> -o <outputfile.pdf>`
 
 Build instructions
 ------------------
@@ -41,9 +41,12 @@ in the song and will be printed in a distinct style. Example:
 
 ### Directives
 
-The only directive supported for now defines the title of the song:
+The only directives supported for now are:
 
-`{t:Raindrops Keep Falling On My Head}`
+- Song title
+    `{t:Raindrops Keep Falling On My Head}`
+- Song key
+    `{key:F}`
 
 Unlike ChordPro, reChord expects directives only at the beginning of an
 input file.
@@ -64,11 +67,21 @@ Lyrics ::= String
 
 Annotation ::= "<", String, ">"
 
-Chord ::= "[", ChordName, "]"
+Chord ::= AbsoluteChord | RelativeChord
 
-ChordName ::= ( "A" | "B" | "C" | "D" | "E" | "F" | "G" ), [ ( "#", "b" ) ], [ Modifier ]
+AbsoluteChord ::= "[", ChordName, { "/", Pitch } "]"
 
-Modifier ::= String
+RelativeChord ::= "[", Degree, [ Type ], { "/", Degree } "]"
+
+Degree ::= DegreeBase, ( Accidental )*
+
+ChordName ::= Pitch, [ Type ]
+
+Pitch ::= ( "A" | "B" | "C" | "D" | "E" | "F" | "G" ), ( Accidental )*
+
+Accidental ::= "#" | "b"
+
+Type ::= "m" | "m7" | "maj7" | etc...
 
 Roadmap
 -------
