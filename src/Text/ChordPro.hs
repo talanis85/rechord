@@ -130,7 +130,7 @@ absChord = do
     char '['
     base <- chordBase
     modifier <- chordMod
-    t <- chordType
+    t <- chordType >>= chordModifiers
     slash <- option (Degree I natural) $ do
                         char '/'
                         slBase <- chordBase
@@ -172,10 +172,16 @@ chordMod = do
 
 majorMinor = option ionianScale (try $ char 'm' >> return aeolianScale)
 
+{-
 chordType = choice
     [ try (string "maj7") >> return major7Chord
     , try (string "maj9") >> return major9Chord
+    , try (string "13") >> return (dominant7Chord `addToChord` Degree VI natural)
     , try (string "7b13") >> return (dominant7Chord `addToChord` Degree VI flat)
+    , try (string "7b9") >> return (dominant7Chord `addToChord` Degree II flat)
+    , try (string "7sus2") >> return (sus2Chord `addToChord` Degree VII flat)
+    , try (string "7sus4") >> return (sus4Chord `addToChord` Degree VII flat)
+    , try (string "7sus") >> return sus7Chord
     , try (string "7") >> return dominant7Chord
     , try (string "9") >> return dominant9Chord
     , try (string "m7b5") >> return minor7b5Chord
@@ -193,3 +199,41 @@ chordType = choice
     , try (string "add9") >> return (majorChord `addToChord` Degree II natural)
     , try (string "") >> return majorChord
     ]
+    -}
+
+chordType = choice
+    [ try (string "maj7") >> return major7Chord
+    , try (string "maj9") >> return major9Chord
+    , try (string "7") >> return dominant7Chord
+    , try (string "9") >> return dominant9Chord
+    , try (string "m7") >> return minor7Chord
+    , try (string "m9") >> return minor9Chord
+    , try (string "m") >> return minorChord
+    , try (string "dim") >> return diminishedChord
+    , try (string "+") >> return augmentedChord
+    , try (string "sus7") >> return sus7Chord
+    , return majorChord
+    ]
+
+chordModifiers c =
+    (choice
+        [ try (string "sus2") >> (return $ applySus2 c)
+        , try (string "sus4") >> (return $ applySus4 c)
+        , try (string "sus") >> (return $ applySus c)
+        , try (string "b5") >> (return $ c `without` V `with` Degree V flat)
+        , try (string "5") >> (return $ c `without` III)
+        , try (string "b9") >> (return $ c `with` Degree II flat)
+        , try (string "#9") >> (return $ c `with` Degree II sharp)
+        , try (string "add9") >> (return $ c `with` Degree II natural)
+        , try (string "9") >> (return $ c `with` Degree VII flat `with` Degree II natural)
+        , try (string "7") >> (return $ c `with` Degree VII flat)
+        , try (string "maj7") >> (return $ c `with` Degree VII natural)
+        , try (string "6") >> (return $ c `with` Degree VI natural)
+        , try (string "13") >> (return $ c `with` Degree VII flat `with` Degree VI natural)
+        , try (string "b13") >> (return $ c `with` Degree VI flat)
+        , try (string "#11") >> (return $ c `with` Degree IV sharp)
+        , try (string "11") >> (return $ c `with` Degree IV natural)
+        ]
+        >>= chordModifiers)
+    <|>
+    (return c)
