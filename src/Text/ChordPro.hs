@@ -206,6 +206,10 @@ chordType = choice
     , try (string "maj9") >> return major9Chord
     , try (string "7") >> return dominant7Chord
     , try (string "9") >> return dominant9Chord
+    , try (string "69") >> return major69Chord
+    , try (string "6") >> return major6Chord
+    , try (string "m69") >> return minor69Chord
+    , try (string "m6") >> return minor6Chord
     , try (string "m7") >> return minor7Chord
     , try (string "m9") >> return minor9Chord
     , try (string "m") >> return minorChord
