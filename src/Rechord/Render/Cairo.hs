@@ -9,10 +9,35 @@ module Rechord.Render.Cairo
     ) where
 
 import Graphics.Rendering.Cairo
+import Control.Lens
 import Data.ChordPro
 import Data.Music.Tonal
 import Control.Monad (forM_)
 import qualified Data.Text as Text
+
+data LayoutFont = LayoutFont
+    { _fontSize :: Double
+    , _fontFamily :: String
+    , _fontWeight :: FontWeight
+    , _fontSlant :: FontSlant
+    , _fontColor :: (Double, Double, Double)
+    }
+
+data LayoutConfig = LayoutConfig
+    { _chordFont :: LayoutFont
+    , _lyricsFont :: LayoutFont
+    , _titleFont :: LayoutFont
+    , _lineSpacing :: Double
+    , _chordSpacing :: Double
+    , _paragraphSpacing :: Double
+    , _chunkSpacing :: Double
+    , _minChunkWidth :: Double
+    , _pageMargin :: Double
+    , _titleSpacing :: Double
+    }
+
+makeLenses ''LayoutFont
+makeLenses ''LayoutConfig
 
 paperSizeA4 = (595.0, 842.0)
 
@@ -20,9 +45,9 @@ ap3 f (a,b,c) = f a b c
 
 setFont :: LayoutFont -> Render ()
 setFont font = do
-    selectFontFace (fontFamily font) (fontSlant font) (fontWeight font)
-    setFontSize (fontSize $ font)
-    setSourceRGB `ap3` (fontColor $ font)
+    selectFontFace (font ^. fontFamily) (font ^. fontSlant) (font ^. fontWeight)
+    setFontSize (font ^. fontSize)
+    setSourceRGB `ap3` (font ^. fontColor)
 
 chordPath :: LayoutConfig -> String -> Render ()
 chordPath cfg = chordPath' cfg
@@ -43,22 +68,22 @@ chordPath cfg = chordPath' cfg
         | otherwise           = textPath [x] >> chordPath' cfg xs
 
     drawSmall text = do
-      setFontSize (fontSize (chordFont cfg) - 2.0)
+      setFontSize (cfg ^. chordFont ^. fontSize - 2.0)
       -- relMoveTo 0.0 (-3.0)
       textPath text
       -- relMoveTo 0.0 3.0
-      setFontSize (fontSize (chordFont cfg))
+      setFontSize (cfg ^. chordFont ^. fontSize)
 
     drawSmallSuper text = do
-      setFontSize (fontSize (chordFont cfg) - 2.0)
+      setFontSize (cfg ^. chordFont ^. fontSize - 2.0)
       relMoveTo 0.0 (-3.0)
       textPath text
       relMoveTo 0.0 3.0
-      setFontSize (fontSize (chordFont cfg))
+      setFontSize (cfg ^. chordFont ^. fontSize)
 
 renderChord :: LayoutConfig -> TonalChord -> Render (Double)
 renderChord cfg chord = do
-    setFont (chordFont $ cfg)
+    setFont (cfg ^. chordFont)
     chordPath cfg (show chord)
     fill
     extents <- textExtents (show chord)
@@ -66,14 +91,16 @@ renderChord cfg chord = do
 
 renderMarkup :: LayoutConfig -> Markup -> Render (Double)
 renderMarkup cfg markup = do
-    setFont (lyricsFont $ cfg)
+    setFont (cfg ^. lyricsFont)
     extents <- case markup of
         NormalMarkup text -> do
                              textPath text
                              fill
                              textExtents text
         TitleMarkup text  -> do
-                             selectFontFace (fontFamily $ lyricsFont cfg) (fontSlant $ lyricsFont cfg) FontWeightBold
+                             selectFontFace (cfg ^. lyricsFont ^. fontFamily)
+                                            (cfg ^. lyricsFont ^. fontSlant)
+                                            FontWeightBold
                              textPath text
                              fill
                              textExtents (text ++ "   ")
@@ -85,19 +112,23 @@ renderChunk cfg lineSize chunk = do
     (w, h) <- case chunk of
         ChunkEmpty -> return (0.0, 0.0)
         ChunkChord chord -> do
-            translate 0.0 (fontSize $ chordFont cfg)
+            translate 0.0 (cfg ^. chordFont ^. fontSize)
             w <- renderChord cfg chord
-            return (max (minChunkWidth cfg) w, (fontSize $ chordFont cfg))
+            return (max (cfg ^. minChunkWidth) w, (cfg ^. chordFont ^. fontSize))
         ChunkMarkup markup -> do
             translate 0.0 lineSize
             w <- renderMarkup cfg markup
-            return (w, (fontSize $ lyricsFont cfg))
+            return (w, (cfg ^. lyricsFont ^. fontSize))
         ChunkBoth chord markup -> do
-            translate 0.0 (fontSize $ chordFont cfg)
+            translate 0.0 (cfg ^. chordFont ^. fontSize)
             w1 <- renderChord cfg chord
-            translate 0.0 ((chordSpacing cfg) + (fontSize $ lyricsFont cfg))
+            translate 0.0 ((cfg ^. chordSpacing) + (cfg ^. lyricsFont ^. fontSize))
             w2 <- renderMarkup cfg markup
-            return (max (minChunkWidth cfg) (max w1 w2), (fontSize $ chordFont cfg) + (fontSize $ lyricsFont cfg) + (chordSpacing cfg))
+            return ( max (cfg ^. minChunkWidth) (max w1 w2)
+                   ,   (cfg ^. chordFont ^. fontSize)
+                     + (cfg ^. lyricsFont ^. fontSize)
+                     + (cfg ^. chordSpacing)
+                   )
     restore
     return (w, h)
 
@@ -106,18 +137,18 @@ renderLine cfg l = do
     save
     renderLine' l 0
     restore
-    translate 0.0 (lineSize cfg l + lineSpacing cfg)
+    translate 0.0 (lineSize cfg l + cfg ^. lineSpacing)
   where
         renderLine' [] maxH = return maxH
         renderLine' (c:cs) maxH = do
             (w, h) <- renderChunk cfg (lineSize cfg l) c
-            translate (w + (chunkSpacing cfg)) 0.0
+            translate (w + (cfg ^. chunkSpacing)) 0.0
             renderLine' cs (max maxH h)
 
 renderParagraph :: LayoutConfig -> Paragraph TonalChord -> Render ()
 renderParagraph cfg p = do
     forM_ p $ renderLine cfg
-    translate 0.0 (paragraphSpacing cfg)
+    translate 0.0 (cfg ^. paragraphSpacing)
 
 renderPage :: LayoutConfig -> Layout TonalChord -> Render ()
 renderPage cfg paragraphs = do
@@ -128,16 +159,16 @@ renderPage cfg paragraphs = do
 
 renderTitle :: LayoutConfig -> String -> Render ()
 renderTitle cfg title = do
-    setFont $ titleFont cfg
+    setFont $ cfg ^. titleFont
     textPath title
     fill
 
 renderCairoPDF :: LayoutConfig -> (Double, Double) -> FilePath -> String -> Layout TonalChord -> IO ()
 renderCairoPDF cfg (pw, ph) filename title paragraphs = withPDFSurface filename pw ph $ \x -> renderWith x $ do
-    let pageSize = (ph - (pageMargin cfg) * 2)
-    let pageSize1 = pageSize - (fontSize $ titleFont cfg) - (titleSpacing cfg)
+    let pageSize = (ph - (cfg ^. pageMargin) * 2)
+    let pageSize1 = pageSize - (cfg ^. titleFont ^. fontSize) - (cfg ^. titleSpacing)
     let (page1:pages) = paginate cfg (pageSize1:(repeat pageSize)) paragraphs
-    translate (pageMargin cfg) (pageMargin cfg)
+    translate (cfg ^. pageMargin) (cfg ^. pageMargin)
     save
     renderTitle cfg title
     translate 0.0 (pageSize - pageSize1)
@@ -145,83 +176,61 @@ renderCairoPDF cfg (pw, ph) filename title paragraphs = withPDFSurface filename 
     restore
     mapM_ (renderPage cfg) pages
 
-data LayoutFont = LayoutFont
-    { fontSize :: Double
-    , fontFamily :: String
-    , fontWeight :: FontWeight
-    , fontSlant :: FontSlant
-    , fontColor :: (Double, Double, Double)
-    }
-
-data LayoutConfig = LayoutConfig
-    { chordFont :: LayoutFont
-    , lyricsFont :: LayoutFont
-    , titleFont :: LayoutFont
-    , lineSpacing :: Double
-    , chordSpacing :: Double
-    , paragraphSpacing :: Double
-    , chunkSpacing :: Double
-    , minChunkWidth :: Double
-    , pageMargin :: Double
-    , titleSpacing :: Double
-    }
-
 withFont :: String -> LayoutConfig -> LayoutConfig
-withFont font cfg = cfg { chordFont = (chordFont cfg) { fontFamily = font }
-                        , lyricsFont = (lyricsFont cfg) { fontFamily = font }
-                        , titleFont = (titleFont cfg) { fontFamily = font }
-                        }
+withFont font = set (chordFont . fontFamily) font
+              . set (lyricsFont . fontFamily) font
+              . set (titleFont . fontFamily) font
 
 defaultLayoutConfig = LayoutConfig
-    { chordFont = LayoutFont
-        { fontSize = 13.0
-        , fontFamily = "sans-serif"
-        , fontWeight = FontWeightBold
-        , fontSlant = FontSlantNormal
-        , fontColor = (0.5, 0.0, 0.0)
+    { _chordFont = LayoutFont
+        { _fontSize = 13.0
+        , _fontFamily = "sans-serif"
+        , _fontWeight = FontWeightBold
+        , _fontSlant = FontSlantNormal
+        , _fontColor = (0.5, 0.0, 0.0)
         }
-    , lyricsFont = LayoutFont
-        { fontSize = 13.0
-        , fontFamily = "sans-serif"
-        , fontWeight = FontWeightNormal
-        , fontSlant = FontSlantNormal
-        , fontColor = (0.0, 0.0, 0.0)
+    , _lyricsFont = LayoutFont
+        { _fontSize = 13.0
+        , _fontFamily = "sans-serif"
+        , _fontWeight = FontWeightNormal
+        , _fontSlant = FontSlantNormal
+        , _fontColor = (0.0, 0.0, 0.0)
         }
-    , titleFont = LayoutFont
-        { fontSize = 20.0
-        , fontFamily = "sans-serif"
-        , fontWeight = FontWeightBold
-        , fontSlant = FontSlantItalic
-        , fontColor = (0.0, 0.0, 0.0)
+    , _titleFont = LayoutFont
+        { _fontSize = 20.0
+        , _fontFamily = "sans-serif"
+        , _fontWeight = FontWeightBold
+        , _fontSlant = FontSlantItalic
+        , _fontColor = (0.0, 0.0, 0.0)
         }
-    , lineSpacing = 6.0
-    , chordSpacing = 3.0
-    , paragraphSpacing = 20.0
-    , chunkSpacing = 3.0
-    , minChunkWidth = 40.0
-    , pageMargin = 60.0
-    , titleSpacing = 15.0
+    , _lineSpacing = 6.0
+    , _chordSpacing = 3.0
+    , _paragraphSpacing = 20.0
+    , _chunkSpacing = 3.0
+    , _minChunkWidth = 40.0
+    , _pageMargin = 60.0
+    , _titleSpacing = 15.0
     }
 
 chunkSize :: LayoutConfig -> Chunk TonalChord -> Double
 chunkSize cfg c = case c of
     ChunkEmpty             -> 0.0
-    ChunkChord chord       -> fontSize $ chordFont cfg
-    ChunkMarkup lyrics     -> fontSize $ lyricsFont cfg
-    ChunkBoth chord lyrics -> (fontSize $ chordFont cfg) + (fontSize $ lyricsFont cfg) + (chordSpacing cfg)
+    ChunkChord chord       -> cfg ^. chordFont ^. fontSize
+    ChunkMarkup lyrics     -> cfg ^. lyricsFont ^. fontSize
+    ChunkBoth chord lyrics -> (cfg ^. chordFont ^. fontSize) + (cfg ^. lyricsFont ^. fontSize) + (cfg ^. chordSpacing)
 
 lineSize :: LayoutConfig -> Line TonalChord -> Double
 lineSize cfg l = maximum $ map (chunkSize cfg) l
 
 paragraphSize :: LayoutConfig -> Paragraph TonalChord -> Double
-paragraphSize cfg p = (sum $ map (lineSize cfg) p) + (fromIntegral (length p) - 1) * (lineSpacing cfg)
+paragraphSize cfg p = (sum $ map (lineSize cfg) p) + (fromIntegral (length p) - 1) * (cfg ^. lineSpacing)
 
 splitParagraph :: LayoutConfig -> Paragraph TonalChord -> Double -> (Paragraph TonalChord, Paragraph TonalChord)
 splitParagraph cfg p size = splitParagraph' cfg p size []
     where
         splitParagraph' _ [] _ current = (current, [])
         splitParagraph' cfg (l:ls) size current =
-            let linesize = if length ls == 0 then lineSize cfg l else lineSize cfg l + (lineSpacing cfg)
+            let linesize = if length ls == 0 then lineSize cfg l else lineSize cfg l + (cfg ^. lineSpacing)
             in if linesize < size
                   then splitParagraph' cfg ls (size - linesize) (current ++ [l])
                   else (current, (l:ls))
@@ -235,8 +244,8 @@ paginate cfg sizes paragraphs = paginate' cfg paragraphs sizes []
         paginate' _ _ [] cur = [cur]
         paginate' cfg (p:ps) (size:sizes) currentPage =
             let paragraphsize = paragraphSize cfg p
-            in if paragraphsize + (paragraphSpacing cfg) < size
-                  then let newsize = size - paragraphsize - (paragraphSpacing cfg)
+            in if paragraphsize + (cfg ^. paragraphSpacing) < size
+                  then let newsize = size - paragraphsize - (cfg ^. paragraphSpacing)
                        in paginate' cfg ps (newsize:sizes) (currentPage ++ [p])
                   else if paragraphsize <= size
                           then (currentPage ++ [p]) : paginate' cfg ps sizes []

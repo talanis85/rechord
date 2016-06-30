@@ -21,5 +21,6 @@ executable rechord
                      , Data.SetPool
                      , Rechord.Render.Cairo
   build-depends:       base ==4.8.*, parsec, cairo, containers, haScales, filepath,
-                       directory, time, text, configuration-tools
+                       directory, time, text, lens
+  default-extensions:  TemplateHaskell
   hs-source-dirs:      src
