@@ -1,0 +1,7 @@
+flags: {}
+packages:
+- '.'
+- haScales/
+- ezSheet/
+extra-deps: []
+resolver: lts-3.5

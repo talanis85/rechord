@@ -1,9 +1,9 @@
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE DeriveFunctor #-}
 module Data.ChordPro
-    ( Chunk' (ChunkBoth', ChunkChord', ChunkMarkup', ChunkEmpty')
-    , Line', Paragraph'
-    , Chunk (ChunkBoth, ChunkChord, ChunkMarkup, ChunkEmpty)
+    ( Chunk (ChunkBoth, ChunkChord, ChunkMarkup, ChunkEmpty)
     , Line, Paragraph, Markup (NormalMarkup, TitleMarkup)
+    , Layout
     -- , transpose
     , bake
     ) where
@@ -14,6 +14,16 @@ import Data.Music.Tonal
 
 -- File layout
 
+type Layout a = [Paragraph a]
+type Paragraph a = [Line a]
+type Line a = [Chunk a]
+data Chunk a = ChunkBoth a Markup
+             | ChunkChord a
+             | ChunkMarkup Markup
+             | ChunkEmpty
+    deriving (Show, Functor)
+
+{-
 type Paragraph' = [Line']
 type Line' = [Chunk']
 data Chunk' = ChunkBoth' DegreeChord Markup
@@ -28,20 +38,23 @@ data Chunk = ChunkBoth TonalChord Markup
            | ChunkChord TonalChord
            | ChunkMarkup Markup
            | ChunkEmpty
+-}
 
 data Markup = NormalMarkup String | TitleMarkup String
     deriving (Show)
 
 type Option = (String, String)
 
-bake :: TonalScale -> [Paragraph'] -> [Paragraph]
-bake scale = map . map . map $ bakeChunk scale
+mapLayout :: (a -> b) -> Layout a -> Layout b
+mapLayout = map . map . map . fmap
 
-bakeChunk :: TonalScale -> Chunk' -> Chunk
-bakeChunk scale (ChunkBoth' c m) = ChunkBoth (bakeChord scale c) m
-bakeChunk scale (ChunkChord' c) = ChunkChord (bakeChord scale c)
-bakeChunk scale (ChunkMarkup' m) = ChunkMarkup m
-bakeChunk scale ChunkEmpty' = ChunkEmpty
+bake :: TonalScale -> Layout DegreeChord -> Layout TonalChord
+bake scale = mapLayout $ bakeChord scale
+
+{-
+bakeChunk :: TonalScale -> Chunk DegreeChord -> Chunk TonalChord
+bakeChunk scale = fmap (bakeChord scale)
+-}
 
 {-
 transpose :: Int -> [Paragraph] -> [Paragraph]

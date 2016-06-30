@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Text.ChordPro
     ( parseChordPro
     , parseScale
@@ -58,22 +59,22 @@ chunkChordLyric = do
     crd <- chord
     lyr <- lyrics
     case dropWhile (`elem` " \t") lyr of
-        "" -> return $ ChunkChord' crd
-        _ -> return $ ChunkBoth' crd (NormalMarkup lyr)
+        "" -> return $ ChunkChord crd
+        _ -> return $ ChunkBoth crd (NormalMarkup lyr)
 
 chunkChord = do
     crd <- chord
-    return $ ChunkChord' crd
+    return $ ChunkChord crd
 
 chunkLyric = do
     lyr <- lyrics
-    return $ ChunkMarkup' (NormalMarkup lyr)
+    return $ ChunkMarkup (NormalMarkup lyr)
 
 chunkTitle = do
     char '<'
     tit <- many1 (noneOf ">")
     char '>'
-    return $ ChunkMarkup' (TitleMarkup tit)
+    return $ ChunkMarkup (TitleMarkup tit)
 
 sheetOption = do
     char '{'
@@ -141,8 +142,8 @@ absChord = do
     return $ DegreeChord (degreeOf scale (Pitch base modifier)) (t </> slash)
 
 chordDegree = choice
-    [ try (string "II") >> return II
-    , try (string "III") >> return III
+    [ try (string "III") >> return III
+    , try (string "II") >> return II
     , try (string "IV") >> return IV
     , try (string "VII") >> return VII
     , try (string "VI") >> return VI
@@ -203,6 +204,7 @@ chordType = choice
 
 chordType = choice
     [ try (string "maj7") >> return major7Chord
+    , try (string "mmaj7") >> return minorMajor7Chord
     , try (string "maj9") >> return major9Chord
     , try (string "7") >> return dominant7Chord
     , try (string "9") >> return dominant9Chord

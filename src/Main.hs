@@ -70,6 +70,9 @@ options =
     , Option ['s'] ["singers"]
         (ReqArg (\f opts -> opts { optSingers = split ',' f }) "SINGERS")
         "singer1,singer2,..."
+    , Option [] ["font"]
+        (ReqArg (\f opts -> opts { optLayout = withFont f (optLayout opts) }) "FONT")
+        "Font family"
     ]
 
 split c l = split' c [] l
@@ -105,20 +108,29 @@ main = do
 
             f <- readFile infile
             case parseChordPro f of
-                Right (o, k, p) -> {- 
+                Right (o, k, p) -> {-
                                    let transposition = if optTranspose opts == 0
                                                        then (read $ M.findWithDefault "0" "tp" o)
                                                        else optTranspose opts
-                                       in renderCairoPDF defaultLayoutConfig paperSizeA4 outfile (M.findWithDefault "NO TITLE" "t" o) $ 
+                                       in renderCairoPDF defaultLayoutConfig paperSizeA4 outfile (M.findWithDefault "NO TITLE" "t" o) $
                                            transpose transposition (bake key p)
                                    -}
                                    let key = TonalScale (fromMaybe (tscaleRoot k) (optKey opts)) (tscaleScale k)
-                                   in renderCairoPDF defaultLayoutConfig
+                                   in renderCairoPDF (optLayout opts)
                                                      paperSizeA4
                                                      outfile
                                                      (M.findWithDefault "NO TITLE" "t" o)
                                                      (bake key p)
-                Left e -> error $ "Error parsing: " ++ (show e)
+                Left e' -> error $ "Error parsing: " ++ (show e')
+{-
+                Left e -> case parseEasySheet f of
+                    Right (o, k, p) -> let key = TonalScale (fromMaybe (tscaleRoot k) (optKey opts)) (tscaleScale k)
+                                       in renderLilyPond (optLayout opts)
+                                                         paperSizeA4
+                                                         outfile
+                                                         (M.findWithDefault "NO TITLE" "t" o)
+                                                         (bake key p)
+-}
         ActionBatch -> do
             when (isNothing $ optInput opts) $ error "No input directory specified"
             let indir = fromJust $ optInput opts
@@ -134,7 +146,7 @@ main = do
                 Left err -> error $ "Error parsing poolfile:\n" ++ err
                 Right pool -> forM_ (filterSingers singers pool) $ \(song, singer, pitch) -> do
                     let infile = indir </> (song ++ ".crd")
-                    f <- try $ readFile infile
+                    f <- tryIOError $ readFile infile
                     case f of
                         Left _ -> putStrLn $ "MISS " ++ song
                         Right f' -> do
@@ -153,7 +165,7 @@ main = do
                                         let key = TonalScale pitch (tscaleScale k)
                                         let minmaj = if tscaleScale k `scaleHas` Degree III flat then "m" else ""
                                         let title = printf "%s (%s, %s%s)" (M.findWithDefault "NO TITLE" "t" o) singer (show pitch) minmaj
-                                        renderCairoPDF defaultLayoutConfig
+                                        renderCairoPDF (optLayout opts)
                                                        paperSizeA4
                                                        outfile
                                                        title
@@ -162,7 +174,7 @@ main = do
 
 modTime :: FilePath -> IO UTCTime
 modTime p = do
-    r <- try (getModificationTime p)
+    r <- tryIOError (getModificationTime p)
     case r of
         Left _ -> return $ UTCTime (ModifiedJulianDay 0) (secondsToDiffTime 0)
         Right t -> return t

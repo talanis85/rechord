@@ -16,7 +16,10 @@ cabal-version:       >=1.8
 
 executable rechord
   main-is:             Main.hs
-  -- other-modules:       
-  build-depends:       base ==4.5.*, parsec ==3.1.*, cairo ==0.12.*, containers ==0.4.2.*, haScales ==0.1.*, filepath,
-                       directory, time
+  other-modules:       Text.ChordPro
+                     , Data.ChordPro
+                     , Data.SetPool
+                     , Rechord.Render.Cairo
+  build-depends:       base ==4.8.*, parsec, cairo, containers, haScales, filepath,
+                       directory, time, text, configuration-tools
   hs-source-dirs:      src
