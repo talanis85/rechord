@@ -31,18 +31,30 @@ renderParagraph para = do
 renderLine :: Line TonalChord -> Render ()
 renderLine line = do
   out "<div class=\"line\">"
-  mapM_ renderChunk line
+  mapM_ (renderChunk (any isChord line) (any isMarkup line)) line
   out "</div>"
 
-renderChunk :: Chunk TonalChord -> Render ()
-renderChunk chunk = do
+isChord (ChunkChord _) = True
+isChord (ChunkBoth _ _) = True
+isChord _ = False
+
+isMarkup (ChunkMarkup _) = True
+isMarkup (ChunkBoth _ _) = True
+isMarkup _ = True
+
+renderChunk :: Bool -> Bool -> Chunk TonalChord -> Render ()
+renderChunk padChord padMarkup chunk = do
   out "<div class=\"block\">"
   case chunk of
     ChunkBoth c m -> do
       renderChord c
       renderMarkup m
-    ChunkMarkup m -> renderMarkup m
-    ChunkChord c -> renderChord c
+    ChunkMarkup m -> do
+      when padChord $ out "<div class=\"chord\">&nbsp;</div>"
+      renderMarkup m
+    ChunkChord c -> do
+      renderChord c
+      when padMarkup $ out "<div class=\"lyrics\">&nbsp;</div>"
     ChunkEmpty -> return ()
   out "</div>"
 
