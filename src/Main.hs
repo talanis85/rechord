@@ -1,5 +1,6 @@
 import System.Environment
 import Rechord.Render.Cairo
+import Rechord.Render.HTML
 import Text.ChordPro
 import Data.ChordPro
 import Text.SetPool
@@ -23,6 +24,7 @@ data Action = ActionRender | ActionQueryKey | ActionBatch
 data Options = Options
     { optVersion    :: Bool
     , optHelp       :: Bool
+    , optHTML       :: Bool
     , optInput      :: Maybe FilePath
     , optOutput     :: Maybe FilePath
     , optSingers    :: [String]
@@ -35,6 +37,7 @@ data Options = Options
 defaultOptions = Options
     { optVersion = False
     , optHelp = False
+    , optHTML = False
     , optInput = Nothing
     , optOutput = Nothing
     , optSingers = []
@@ -52,6 +55,9 @@ options =
     , Option ['h'] ["help"]
         (NoArg (\opts -> opts { optHelp = True }))
         "show this help"
+    , Option [] ["html"]
+        (NoArg (\opts -> opts { optHTML = True }))
+        "html output"
     , Option ['i'] []
         (ReqArg (\f opts -> opts { optInput = Just f }) "FILE")
         "input FILE"
@@ -116,11 +122,15 @@ main = do
                                            transpose transposition (bake key p)
                                    -}
                                    let key = TonalScale (fromMaybe (tscaleRoot k) (optKey opts)) (tscaleScale k)
-                                   in renderCairoPDF (optLayout opts)
-                                                     paperSizeA4
-                                                     outfile
-                                                     (M.findWithDefault "NO TITLE" "t" o)
-                                                     (bake key p)
+                                   in if optHTML opts
+                                         then renderHTML outfile
+                                                         (M.findWithDefault "NO TITLE" "t" o)
+                                                         (bake key p)
+                                         else renderCairoPDF (optLayout opts)
+                                                             paperSizeA4
+                                                             outfile
+                                                             (M.findWithDefault "NO TITLE" "t" o)
+                                                             (bake key p)
                 Left e' -> error $ "Error parsing: " ++ (show e')
 {-
                 Left e -> case parseEasySheet f of
@@ -165,11 +175,15 @@ main = do
                                         let key = TonalScale pitch (tscaleScale k)
                                         let minmaj = if tscaleScale k `scaleHas` Degree III flat then "m" else ""
                                         let title = printf "%s (%s, %s%s)" (M.findWithDefault "NO TITLE" "t" o) singer (show pitch) minmaj
-                                        renderCairoPDF (optLayout opts)
-                                                       paperSizeA4
-                                                       outfile
-                                                       title
-                                                       (bake key p)
+                                        if optHTML opts
+                                           then renderHTML outfile
+                                                           title
+                                                           (bake key p)
+                                           else renderCairoPDF (optLayout opts)
+                                                               paperSizeA4
+                                                               outfile
+                                                               title
+                                                               (bake key p)
                                         putStrLn $ "OK   " ++ song
 
 modTime :: FilePath -> IO UTCTime
