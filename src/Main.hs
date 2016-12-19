@@ -160,7 +160,9 @@ main = do
                     case f of
                         Left _ -> putStrLn $ "MISS " ++ song
                         Right f' -> do
-                            let outfile = outdir </> (song ++ ".pdf")
+                            let outfile = if optHTML opts
+                                             then outdir </> (song ++ ".html")
+                                             else outdir </> (song ++ ".pdf")
 
                             intime <- modTime infile
                             outtime <- modTime outfile
