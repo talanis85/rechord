@@ -68,6 +68,7 @@ renderPage :: String -> Layout TonalChord -> Render ()
 renderPage title layout = do
   out $ printf "<html><head><title>%s</title>" title
   out "<link rel=\"stylesheet\" type=\"text/css\" href=\"css/rechord.css\" />"
+  out "<link rel=\"stylesheet\" type=\"text/css\" href=\"css/theme.css\" />"
   out "<script type=\"text/javascript\" src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js\"></script>"
   out "<script type=\"text/javascript\" src=\"js/chordParser.js\"></script>"
   out "<script type=\"text/javascript\" src=\"js/rechord.js\"></script>"
