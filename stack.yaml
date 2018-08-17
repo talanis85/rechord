@@ -3,4 +3,7 @@ packages:
 - '.'
 - haScales/
 extra-deps: []
-resolver: lts-3.5
+resolver: lts-9.21
+nix:
+  enable: true
+  shell-file: default.nix

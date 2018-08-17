@@ -16,6 +16,6 @@ cabal-version:       >=1.8
 
 library
   exposed-modules:     Data.Music.Scales, Data.Music.Chords, Data.Music.Tonal
-  -- other-modules:       
+  other-modules:       Data.Music.Aux
   build-depends:       base, containers
   hs-source-dirs:      src
