@@ -9,6 +9,7 @@ import Data.Music.Tonal
 import Data.Music.Scales
 import qualified Data.Map as M
 import Control.Monad (when, forM_)
+import System.IO (hGetContents, hSetEncoding, IOMode (..), withFile, utf8)
 import System.IO.Error
 import System.FilePath
 import System.Directory
@@ -112,7 +113,10 @@ main = do
             when (isNothing $ optOutput opts) $ error "No output file specified"
             let outfile = fromJust $ optOutput opts
 
-            f <- readFile infile
+            f <- withFile infile ReadMode $ \fh -> do
+              hSetEncoding fh utf8
+              s <- hGetContents fh
+              length s `seq` return s
             case parseChordPro f of
                 Right (o, k, p) -> {-
                                    let transposition = if optTranspose opts == 0
