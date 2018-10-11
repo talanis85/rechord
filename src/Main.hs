@@ -1,22 +1,22 @@
+import Control.Monad (when, forM_)
+import qualified Data.Map as Map
+import Data.Maybe (isNothing, fromJust, fromMaybe)
+import Data.Time.Calendar
+import Data.Time.Clock
+import System.Console.GetOpt
+import System.Directory
 import System.Environment
+import System.FilePath
+import System.IO (hGetContents, hSetEncoding, IOMode (..), withFile, utf8)
+import System.IO.Error
+import Text.Printf
+
+import Data.ChordPro
+import Data.Music.Scales
+import Data.Music.Tonal
 import Rechord.Render.Cairo
 import Rechord.Render.HTML
 import Text.ChordPro
-import Data.ChordPro
-import Data.Music.Tonal
-import Data.Music.Scales
-import qualified Data.Map as M
-import Control.Monad (when, forM_)
-import System.IO (hGetContents, hSetEncoding, IOMode (..), withFile, utf8)
-import System.IO.Error
-import System.FilePath
-import System.Directory
-import Data.Time.Clock
-import Data.Time.Calendar
-
-import Text.Printf
-import System.Console.GetOpt
-import Data.Maybe (isNothing, fromJust, fromMaybe)
 
 data Action = ActionRender | ActionQueryKey
 
@@ -111,11 +111,11 @@ main = do
                 Right (o, k, p) -> let key = TonalScale (fromMaybe (tscaleRoot k) (optKey opts)) (tscaleScale k)
                                    in if optHTML opts
                                          then renderHTML outfile
-                                                         (M.findWithDefault "NO TITLE" "t" o)
+                                                         (Map.findWithDefault "NO TITLE" "t" o)
                                                          (bake key p)
                                          else renderCairoPDF (optLayout opts)
                                                              paperSizeA4
                                                              outfile
-                                                             (M.findWithDefault "NO TITLE" "t" o)
+                                                             (Map.findWithDefault "NO TITLE" "t" o)
                                                              (bake key p)
                 Left e' -> error $ "Error parsing: " ++ (show e')
