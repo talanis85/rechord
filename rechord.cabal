@@ -18,7 +18,6 @@ executable rechord
   main-is:             Main.hs
   other-modules:       Text.ChordPro
                      , Data.ChordPro
-                     , Data.SetPool
                      , Rechord.Render.Cairo
                      , Rechord.Render.HTML
   build-depends:       base, parsec, cairo, containers, haScales, filepath,
