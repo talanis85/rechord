@@ -20,7 +20,16 @@ executable rechord
                      , Data.ChordPro
                      , Rechord.Render.Cairo
                      , Rechord.Render.HTML
-  build-depends:       base, parsec, cairo, containers, haScales, filepath,
-                       directory, time, text, lens, mtl
+  build-depends:       base
+                     , cairo
+                     , containers
+                     , filepath
+                     , gitrev
+                     , haScales
+                     , lens
+                     , mtl
+                     , optparse-applicative
+                     , parsec
+                     , text
   default-extensions:  TemplateHaskell
   hs-source-dirs:      src
