@@ -36,6 +36,7 @@ commandP = hsubparser
                                           <*> maybeOption pitchP (short 'k' <> metavar "KEY")
                                           <*> option auto (short 't' <> metavar "TRANSPOSITION" <> value 0)
                                           <*> option str (long "font" <> metavar "FONT" <> value "sans serif")
+                                          <*> many (option str (short 'h' <> metavar "HEADER"))
                                           <*> option formatP (short 'f' <> metavar "FORMAT" <>  value FormatPdf))
                               (progDesc "Read a message."))
   <> command "query"    (info queryP (progDesc "Query information about a sheet"))
@@ -60,8 +61,8 @@ formatP = maybeReader formatP'
     formatP' "pdf" = Just FormatPdf
     formatP' _ = Nothing
 
-cmdRender :: FilePath -> FilePath -> Maybe Pitch -> Int -> String -> Format -> IO ()
-cmdRender input output pitch transposition font format = do
+cmdRender :: FilePath -> FilePath -> Maybe Pitch -> Int -> String -> [String] -> Format -> IO ()
+cmdRender input output pitch transposition font headers format = do
   withFile input ReadMode $ \fh -> do
     hSetEncoding fh utf8
     f <- hGetContents fh
@@ -82,6 +83,7 @@ cmdRender input output pitch transposition font format = do
                 paperSizeA4
                 output
                 (Map.findWithDefault "NO TITLE" "t" o)
+                headers
                 (bake key p)
         Left e' -> error $ "Error parsing: " ++ (show e')
 

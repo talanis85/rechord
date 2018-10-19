@@ -27,6 +27,7 @@ data LayoutConfig = LayoutConfig
     { _chordFont :: LayoutFont
     , _lyricsFont :: LayoutFont
     , _titleFont :: LayoutFont
+    , _headerFont :: LayoutFont
     , _lineSpacing :: Double
     , _chordSpacing :: Double
     , _paragraphSpacing :: Double
@@ -34,6 +35,7 @@ data LayoutConfig = LayoutConfig
     , _minChunkWidth :: Double
     , _pageMargin :: Double
     , _titleSpacing :: Double
+    , _headerSpacing :: Double
     }
 
 makeLenses ''LayoutFont
@@ -163,14 +165,32 @@ renderTitle cfg title = do
     textPath title
     fill
 
-renderCairoPDF :: LayoutConfig -> (Double, Double) -> FilePath -> String -> Layout TonalChord -> IO ()
-renderCairoPDF cfg (pw, ph) filename title paragraphs = withPDFSurface filename pw ph $ \x -> renderWith x $ do
+renderHeaders :: LayoutConfig -> Double -> [String] -> Render ()
+renderHeaders cfg pw headers = mapM_ renderHeader headers
+  where
+    renderHeader header = do
+      save
+      setFont $ cfg ^. headerFont
+      extents <- textExtents header
+      translate (pw - textExtentsXadvance extents - (cfg ^. pageMargin) * 2) 0.0
+      textPath header
+      fill
+      restore
+      translate 0.0 (cfg ^. headerFont ^. fontSize + cfg ^. headerSpacing)
+
+renderCairoPDF :: LayoutConfig -> (Double, Double) -> FilePath -> String -> [String] -> Layout TonalChord -> IO ()
+renderCairoPDF cfg (pw, ph) filename title headers paragraphs = withPDFSurface filename pw ph $ \x -> renderWith x $ do
     let pageSize = (ph - (cfg ^. pageMargin) * 2)
+    let headersSize = (cfg ^. headerFont ^. fontSize) * fromIntegral (length headers)
     let pageSize1 = pageSize - (cfg ^. titleFont ^. fontSize) - (cfg ^. titleSpacing)
     let (page1:pages) = paginate cfg (pageSize1:(repeat pageSize)) paragraphs
     translate (cfg ^. pageMargin) (cfg ^. pageMargin)
     save
+    save
     renderTitle cfg title
+    translate 0.0 (cfg ^. titleFont ^. fontSize)
+    renderHeaders cfg pw headers
+    restore
     translate 0.0 (pageSize - pageSize1)
     renderPage cfg page1
     restore
@@ -203,6 +223,13 @@ defaultLayoutConfig = LayoutConfig
         , _fontSlant = FontSlantItalic
         , _fontColor = (0.0, 0.0, 0.0)
         }
+    , _headerFont = LayoutFont
+        { _fontSize = 13.0
+        , _fontFamily = "sans-serif"
+        , _fontWeight = FontWeightNormal
+        , _fontSlant = FontSlantNormal
+        , _fontColor = (0.0, 0.0, 0.0)
+        }
     , _lineSpacing = 6.0
     , _chordSpacing = 3.0
     , _paragraphSpacing = 20.0
@@ -210,6 +237,7 @@ defaultLayoutConfig = LayoutConfig
     , _minChunkWidth = 40.0
     , _pageMargin = 60.0
     , _titleSpacing = 15.0
+    , _headerSpacing = 6.0
     }
 
 chunkSize :: LayoutConfig -> Chunk TonalChord -> Double
