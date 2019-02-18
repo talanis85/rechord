@@ -5,5 +5,4 @@ packages:
 extra-deps: []
 resolver: lts-9.21
 nix:
-  enable: true
   shell-file: stack.nix
