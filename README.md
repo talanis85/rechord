@@ -8,13 +8,12 @@ ChordPro-like text files.
 
 Usage:
 
-`rechord [-k <key>] [-t <transposition>] -i <inputfile.cho> -o <outputfile.pdf>`
+`rechord render [-k <key>] [-t <transposition>] <inputfile.crd> <outputfile.pdf>`
 
 Build instructions
 ------------------
 
-`cabal configure`  
-`cabal build`
+`stack build`
 
 Input format
 ------------
@@ -87,4 +86,3 @@ Roadmap
 -------
 
 * Configurable style
-* Automatic transposition
