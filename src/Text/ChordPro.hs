@@ -47,24 +47,24 @@ line = do
     newline
     return chunks
 
-chunk = try chunkChordLyric
+chunk = try chunkMusicLyric
         <|>
-        try chunkChord
+        try chunkMusic
         <|>
         try chunkLyric
         <|>
         try chunkTitle
 
-chunkChordLyric = do
-    crd <- chord
+chunkMusicLyric = do
+    mus <- music
     lyr <- lyrics
     case dropWhile (`elem` " \t") lyr of
-        "" -> return $ ChunkChord crd
-        _ -> return $ ChunkBoth crd (NormalMarkup lyr)
+        "" -> return $ ChunkMusic mus
+        _ -> return $ ChunkBoth mus (NormalMarkup lyr)
 
-chunkChord = do
-    crd <- chord
-    return $ ChunkChord crd
+chunkMusic = do
+    mus <- music
+    return $ ChunkMusic mus
 
 chunkLyric = do
     lyr <- lyrics
@@ -94,7 +94,7 @@ sheetOption = do
     return (name, value)
 
 lyrics = do
-    l <- many1 (noneOf "<{[\n")
+    l <- many1 (noneOf "|<{[\n")
     return l
 
 {-
@@ -111,6 +111,18 @@ chord = do
     char ']'
     return $ TonalChord (Pitch base modifier) (t </> slash)
 -}
+
+music = choice [try musicBar, try musicChord]
+
+musicBar = do
+    skipMany (oneOf " \t")
+    char '|'
+    skipMany (oneOf " \t")
+    return MusicBar
+
+musicChord = do
+    crd <- chord
+    return $ MusicChord crd
 
 chord = choice [try absChord, try relChord]
 

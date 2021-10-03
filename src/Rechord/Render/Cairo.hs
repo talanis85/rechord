@@ -30,9 +30,10 @@ data LayoutConfig = LayoutConfig
     , _headerFont :: LayoutFont
     , _lineSpacing :: Double
     , _chordSpacing :: Double
+    , _barWidth :: Double
     , _paragraphSpacing :: Double
     , _chunkSpacing :: Double
-    , _minChunkWidth :: Double
+    , _minChordWidth :: Double
     , _pageMargin :: Double
     , _titleSpacing :: Double
     , _headerSpacing :: Double
@@ -83,13 +84,26 @@ chordPath cfg = chordPath' cfg
       relMoveTo 0.0 3.0
       setFontSize (cfg ^. chordFont ^. fontSize)
 
+renderMusic :: LayoutConfig -> Music TonalChord -> Render (Double)
+renderMusic cfg (MusicChord chord) = renderChord cfg chord
+renderMusic cfg MusicBar = renderBar cfg
+
+renderBar :: LayoutConfig -> Render (Double)
+renderBar cfg = do
+    setFont (cfg ^. chordFont)
+    setFontSize (cfg ^. chordFont ^. fontSize)
+    textPath "|"
+    fill
+    extents <- textExtents "|"
+    return (cfg ^. barWidth)
+
 renderChord :: LayoutConfig -> TonalChord -> Render (Double)
 renderChord cfg chord = do
     setFont (cfg ^. chordFont)
     chordPath cfg (show chord)
     fill
     extents <- textExtents (show chord)
-    return $ textExtentsXadvance extents
+    return (max (cfg ^. minChordWidth) (textExtentsXadvance extents))
 
 renderMarkup :: LayoutConfig -> Markup -> Render (Double)
 renderMarkup cfg markup = do
@@ -113,20 +127,20 @@ renderChunk cfg lineSize chunk = do
     save
     (w, h) <- case chunk of
         ChunkEmpty -> return (0.0, 0.0)
-        ChunkChord chord -> do
+        ChunkMusic music -> do
             translate 0.0 (cfg ^. chordFont ^. fontSize)
-            w <- renderChord cfg chord
-            return (max (cfg ^. minChunkWidth) w, (cfg ^. chordFont ^. fontSize))
+            w <- renderMusic cfg music
+            return (w, (cfg ^. chordFont ^. fontSize))
         ChunkMarkup markup -> do
             translate 0.0 lineSize
             w <- renderMarkup cfg markup
             return (w, (cfg ^. lyricsFont ^. fontSize))
-        ChunkBoth chord markup -> do
+        ChunkBoth music markup -> do
             translate 0.0 (cfg ^. chordFont ^. fontSize)
-            w1 <- renderChord cfg chord
+            w1 <- renderMusic cfg music
             translate 0.0 ((cfg ^. chordSpacing) + (cfg ^. lyricsFont ^. fontSize))
             w2 <- renderMarkup cfg markup
-            return ( max (cfg ^. minChunkWidth) (max w1 w2)
+            return (   (max w1 w2)
                    ,   (cfg ^. chordFont ^. fontSize)
                      + (cfg ^. lyricsFont ^. fontSize)
                      + (cfg ^. chordSpacing)
@@ -232,9 +246,10 @@ defaultLayoutConfig = LayoutConfig
         }
     , _lineSpacing = 6.0
     , _chordSpacing = 3.0
+    , _barWidth = 5.0
     , _paragraphSpacing = 20.0
     , _chunkSpacing = 3.0
-    , _minChunkWidth = 40.0
+    , _minChordWidth = 40.0
     , _pageMargin = 60.0
     , _titleSpacing = 15.0
     , _headerSpacing = 6.0
@@ -243,7 +258,7 @@ defaultLayoutConfig = LayoutConfig
 chunkSize :: LayoutConfig -> Chunk TonalChord -> Double
 chunkSize cfg c = case c of
     ChunkEmpty             -> 0.0
-    ChunkChord chord       -> cfg ^. chordFont ^. fontSize
+    ChunkMusic music       -> cfg ^. chordFont ^. fontSize
     ChunkMarkup lyrics     -> cfg ^. lyricsFont ^. fontSize
     ChunkBoth chord lyrics -> (cfg ^. chordFont ^. fontSize) + (cfg ^. lyricsFont ^. fontSize) + (cfg ^. chordSpacing)
 
