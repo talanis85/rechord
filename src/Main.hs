@@ -39,6 +39,8 @@ commandP = hsubparser
                                           <*> many (option str (short 'h' <> metavar "HEADER"))
                                           <*> option formatP (short 'f' <> metavar "FORMAT" <>  value FormatPdf))
                               (progDesc "Read a message."))
+  <> command "parse"    (info (cmdParse <$> argument str (metavar "INPUT"))
+                              (progDesc "Only parse (for debugging)"))
   <> command "query"    (info queryP (progDesc "Query information about a sheet"))
   )
 
@@ -86,6 +88,17 @@ cmdRender input output pitch transposition font headers format = do
                 headers
                 (bake key p)
         Left e' -> error $ "Error parsing: " ++ (show e')
+
+cmdParse :: FilePath -> IO ()
+cmdParse input = do
+  withFile input ReadMode $ \fh -> do
+    hSetEncoding fh utf8
+    f <- hGetContents fh
+
+    case parseChordPro f of
+      Right (o, k, p) -> do
+        prettyPrintChordPro (bake k p)
+      Left e' -> error $ "Error parsing: " ++ (show e')
 
 cmdQueryKey :: FilePath -> IO ()
 cmdQueryKey fp = do

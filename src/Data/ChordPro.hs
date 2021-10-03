@@ -5,6 +5,7 @@ module Data.ChordPro
     , Line, Paragraph, Markup (..)
     , Layout
     , bake
+    , prettyPrintChordPro
     ) where
 
 import Data.Music.Scales
@@ -34,3 +35,16 @@ mapLayout = map . map . map . fmap
 
 bake :: TonalScale -> Layout DegreeChord -> Layout TonalChord
 bake scale = mapLayout $ bakeChord scale
+
+prettyPrintChordPro :: (Show a) => Layout a -> IO ()
+prettyPrintChordPro paras = mapM_ prettyPrintParagraph paras
+  where
+    prettyPrintParagraph p = do
+      putStrLn "PARAGRAPH"
+      mapM_ prettyPrintLine p
+    prettyPrintLine l = do
+      putStrLn "  LINE"
+      mapM_ prettyPrintChunk l
+    prettyPrintChunk c = do
+      putStr "    CHUNK: "
+      putStrLn (show c)
