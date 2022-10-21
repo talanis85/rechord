@@ -12,7 +12,7 @@ import System.IO.Error
 import Data.ChordPro
 import Data.Music.Scales
 import Data.Music.Tonal
-import Rechord.Render.Cairo
+import Rechord.Render.Disguise
 import Rechord.Render.HTML
 import Text.ChordPro
 

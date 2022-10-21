@@ -23,6 +23,8 @@ executable rechord
   build-depends:       base
                      , cairo
                      , containers
+                     , disguise
+                     , disguise-gtk
                      , filepath
                      , gitrev
                      , haScales
