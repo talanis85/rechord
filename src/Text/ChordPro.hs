@@ -47,13 +47,20 @@ line = do
     newline
     return chunks
 
-chunk = try chunkMusicLyric
+chunk = try chunkExtLily
+        <|>
+        try chunkMusicLyric
         <|>
         try chunkMusic
         <|>
         try chunkLyric
         <|>
         try chunkTitle
+
+chunkExtLily = do
+    string "<lily>"
+    source <- manyTill anyChar (try (string "</lily>"))
+    return $ ChunkExt ExtLily source
 
 chunkMusicLyric = do
     mus <- music

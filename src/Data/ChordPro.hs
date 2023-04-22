@@ -3,6 +3,7 @@
 module Data.ChordPro
     ( Chunk (..), Music (..)
     , Line, Paragraph, Markup (..)
+    , ExtType (..)
     , Layout
     , bake
     , prettyPrintChordPro
@@ -20,12 +21,16 @@ type Line a = [Chunk a]
 data Chunk a = ChunkBoth (Music a) Markup
              | ChunkMusic (Music a)
              | ChunkMarkup Markup
+             | ChunkExt ExtType String
              | ChunkEmpty
     deriving (Show, Functor)
 data Music a = MusicChord a | MusicBar
     deriving (Show, Functor)
 
 data Markup = NormalMarkup String | TitleMarkup String
+    deriving (Show)
+
+data ExtType = ExtLily
     deriving (Show)
 
 type Option = (String, String)

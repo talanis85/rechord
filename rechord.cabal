@@ -19,10 +19,12 @@ executable rechord
   other-modules:       Text.ChordPro
                      , Data.ChordPro
                      , Rechord.Render.Cairo
+                     , Rechord.Render.Ext
                      , Rechord.Render.HTML
   build-depends:       base
                      , cairo
                      , containers
+                     , directory
                      , disguise
                      , disguise-gtk
                      , filepath
@@ -32,6 +34,7 @@ executable rechord
                      , mtl
                      , optparse-applicative
                      , parsec
+                     , process
                      , text
   default-extensions:  TemplateHaskell
   hs-source-dirs:      src

@@ -22,6 +22,8 @@ import Data.Music.Tonal
 import Control.Monad (forM_)
 import qualified Data.Text as Text
 
+import Rechord.Render.Ext
+
 data LayoutFont = LayoutFont
     { _fontSize :: Double
     , _fontFamily :: String
@@ -157,21 +159,25 @@ emptyWidget = FixedWidget $ pure (0, 0, return ())
 
 alignBottom x = space `topOf` x
 
-chunkSize :: LayoutConfig -> Chunk TonalChord -> Double
+chunkSize :: LayoutConfig -> Chunk TonalChord -> IO Double
 chunkSize cfg c = case c of
-    ChunkEmpty             -> 0.0
-    ChunkMusic music       -> cfg ^. chordFont ^. fontSize
-    ChunkMarkup lyrics     -> cfg ^. lyricsFont ^. fontSize
-    ChunkBoth chord lyrics -> (cfg ^. chordFont ^. fontSize) + (cfg ^. lyricsFont ^. fontSize) + (cfg ^. chordSpacing)
+    ChunkEmpty             -> return 0.0
+    ChunkMusic music       -> return $ cfg ^. chordFont ^. fontSize
+    ChunkMarkup lyrics     -> return $ cfg ^. lyricsFont ^. fontSize
+    ChunkBoth chord lyrics -> return $ (cfg ^. chordFont ^. fontSize) + (cfg ^. lyricsFont ^. fontSize) + (cfg ^. chordSpacing)
+    ChunkExt ExtLily src   -> do
+      CairoImage img <- generateLily src
+      (/ 6) <$> fromIntegral <$> imageSurfaceGetHeight img
 
-lineSize :: LayoutConfig -> Line TonalChord -> Double
-lineSize cfg l = maximum $ map (chunkSize cfg) l
+lineSize :: LayoutConfig -> Line TonalChord -> IO Double
+lineSize cfg l = maximum <$> mapM (chunkSize cfg) l
 
-chunk :: (MonadIO f, MonadFix f) => Chunk TonalChord -> LayoutConfig -> CairoWidget (F Dim) (V Dim) f
-chunk ChunkEmpty cfg = spaceV
-chunk (ChunkMusic x) cfg = alignTop (music x cfg)
-chunk (ChunkMarkup x) cfg = alignBottom (markup x cfg)
-chunk (ChunkBoth a b) cfg = alignBottom (music a cfg `topOf` fixh (cfg ^. chordSpacing) spaceV `topOf` markup b cfg)
+chunk :: (MonadIO f, MonadFix f) => Chunk TonalChord -> LayoutConfig -> IO (CairoWidget (F Dim) (V Dim) f)
+chunk ChunkEmpty cfg = return spaceV
+chunk (ChunkMusic x) cfg = return $ alignTop (music x cfg)
+chunk (ChunkMarkup x) cfg = return $ alignBottom (markup x cfg)
+chunk (ChunkBoth a b) cfg = return $ alignBottom (music a cfg `topOf` fixh (cfg ^. chordSpacing) spaceV `topOf` markup b cfg)
+chunk (ChunkExt ExtLily src) cfg = fixedWidthImage <$> generateLily src
 
 music :: (MonadIO f) => Music TonalChord -> LayoutConfig -> CairoWidget (F Dim) (F Dim) f
 music (MusicChord a) = chord a
@@ -216,15 +222,19 @@ markup (TitleMarkup text) cfg = markup' (text ++ "   ") (cfg ^. markFont)
 title :: (MonadIO f) => String -> LayoutConfig -> CairoWidget (F Dim) (F Dim) f
 title text cfg = markup' text (cfg ^. titleFont)
 
-line :: (MonadIO f, MonadFix f) => Line TonalChord -> LayoutConfig -> CairoWidget (F Dim) (F Dim) f
-line chunks cfg = fixh (lineSize cfg chunks) (foldl leftOf spaceV (map makeChunk chunks))
+line :: (MonadIO f, MonadFix f) => Line TonalChord -> LayoutConfig -> IO (CairoWidget (F Dim) (F Dim) f)
+line chunks cfg = do
+  ls <- lineSize cfg chunks
+  fixh ls <$> foldl leftOf spaceV <$> mapM makeChunk chunks
   where
     makeChunk x = chunk x cfg
 
-paragraph :: (MonadIO f, MonadFix f) => Paragraph TonalChord -> LayoutConfig -> CairoWidget (F Dim) (F Dim) f
-paragraph lines cfg = foldl topOf emptyWidget (map makeLine lines)
+paragraph :: (MonadIO f, MonadFix f) => Paragraph TonalChord -> LayoutConfig -> IO (CairoWidget (F Dim) (F Dim) f)
+paragraph lines cfg = foldl topOf emptyWidget <$> mapM makeLine lines
   where
-    makeLine x = line x cfg `topOf` fixh (cfg ^. lineSpacing) spaceV
+    makeLine x = do
+      l <- line x cfg
+      return $ l `topOf` fixh (cfg ^. lineSpacing) spaceV
 
 renderCairoPDF :: LayoutConfig -> (Double, Double) -> FilePath -> String -> [String] -> Layout TonalChord -> IO ()
 renderCairoPDF cfg (pw, ph) filename titleStr headers paragraphs = do
@@ -236,10 +246,12 @@ renderCairoPDF cfg (pw, ph) filename titleStr headers paragraphs = do
         `topOf`
         fixh (cfg ^. titleSpacing) spaceV
 
-  let makeParagraph x =
-        paragraph x cfg `topOf` fixh (cfg ^. paragraphSpacing) spaceV
+  let makeParagraph x = do
+        p <- paragraph x cfg
+        return $ p `topOf` fixh (cfg ^. paragraphSpacing) spaceV
 
-  pages <- paginate ph' (header : map makeParagraph paragraphs)
+  paragraphWidgets <- mapM makeParagraph paragraphs
+  pages <- paginate ph' (header : paragraphWidgets)
   withPDFSurface filename pw ph $ \surface -> do
     let renderPage x = do
           case pad (cfg ^. pageMargin) x of
