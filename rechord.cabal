@@ -19,6 +19,7 @@ executable rechord
   other-modules:       Text.ChordPro
                      , Data.ChordPro
                      , Rechord.Render.Cairo
+                     , Rechord.Render.Disguise
                      , Rechord.Render.Ext
                      , Rechord.Render.HTML
   build-depends:       base
