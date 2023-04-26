@@ -6,11 +6,11 @@ extra-deps:
 - git: "https://github.com/talanis85/disguise.git"
   commit: "8840e025f34469efd930f461a39a8d7177660626"
 - git: "https://github.com/talanis85/disguise-gtk.git"
-  commit: "7d16df0c9f830accc28374455c6897f57e50df95"
-- cairo-0.13.8.1
-- gio-0.13.8.1
-- glib-0.13.8.1
-- gtk2hs-buildtools-0.13.8.0
+  commit: "416959c4ee30c08e5caa922f5cea0a2ac721253f"
+- cairo-0.13.8.2
+- gio-0.13.8.2
+- glib-0.13.8.2
+- gtk2hs-buildtools-0.13.8.2
 - gtk3-0.15.5
 - pango-0.13.8.1
 resolver: lts-16.31
@@ -18,9 +18,10 @@ nix:
   # shell-file: stack.nix
   packages:
     - cairo
-    - gnome3.gtk
+    - gtk3
     - zlib
     - pango
     - pkgconfig
-    - xlibs.xorgproto
+    - xorg.xorgproto
     - xorg.libX11
+    - lilypond
