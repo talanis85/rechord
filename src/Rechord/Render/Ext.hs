@@ -23,9 +23,9 @@ generateLily src = do
         Left err -> error err
         Right img' -> return img'
     ExitFailure n -> do
-      putStrLn $ "Lilyond failed with code " ++ (show n)
-      putStrLn "stdout:"
-      putStrLn out
-      putStrLn "stderr:"
-      putStrLn err
+      hPutStrLn stderr $ "Lilyond failed with code " ++ (show n)
+      hPutStrLn stderr "stdout:"
+      hPutStrLn stderr out
+      hPutStrLn stderr "stderr:"
+      hPutStrLn stderr err
       error "unrecoverable"
