@@ -13,6 +13,8 @@ import Data.Music.Scales
 import Data.Music.Chords
 import Data.Music.Tonal
 
+import Data.Char (toLower)
+
 -- File layout
 
 type Layout a = [Paragraph a]
@@ -30,7 +32,7 @@ data Music a = MusicChord a | MusicBar
 data Markup = NormalMarkup String | TitleMarkup String
     deriving (Show)
 
-data ExtType = ExtLily
+data ExtType = ExtLily TonalScale
     deriving (Show)
 
 type Option = (String, String)
@@ -38,8 +40,26 @@ type Option = (String, String)
 mapLayout :: (a -> b) -> Layout a -> Layout b
 mapLayout = map . map . map . fmap
 
+transposeLily :: TonalScale -> Layout a -> Layout a
+transposeLily scale x = map (map (map transposeLily')) x
+  where
+    transposeLily' (ChunkExt (ExtLily scale') src) = ChunkExt (ExtLily scale) $
+      "\\transpose " ++ formatLilyPitch (tscaleRoot scale') ++ " " ++ formatLilyPitch (tscaleRoot scale) ++ " { " ++ src ++ " }"
+    transposeLily' x = x
+
+formatLilyPitch :: Pitch -> String
+formatLilyPitch (Pitch base acc) = formatBase base <> formatAcc acc
+  where
+    formatBase x = map toLower (show x)
+    formatAcc x = mconcat $ map transAcc (show x)
+    transAcc '#' = "is"
+    transAcc 'b' = "es"
+    transAcc _ = ""
+
 bake :: TonalScale -> Layout DegreeChord -> Layout TonalChord
-bake scale = mapLayout $ bakeChord scale
+bake scale =
+  (mapLayout $ bakeChord scale)
+  . transposeLily scale
 
 prettyPrintChordPro :: (Show a) => Layout a -> IO ()
 prettyPrintChordPro paras = mapM_ prettyPrintParagraph paras

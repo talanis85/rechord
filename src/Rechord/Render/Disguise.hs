@@ -165,7 +165,7 @@ chunkSize cfg c = case c of
     ChunkMusic music       -> return $ cfg ^. chordFont ^. fontSize
     ChunkMarkup lyrics     -> return $ cfg ^. lyricsFont ^. fontSize
     ChunkBoth chord lyrics -> return $ (cfg ^. chordFont ^. fontSize) + (cfg ^. lyricsFont ^. fontSize) + (cfg ^. chordSpacing)
-    ChunkExt ExtLily src   -> do
+    ChunkExt (ExtLily _) src   -> do
       CairoImage img <- generateLily src
       (/ 6) <$> fromIntegral <$> imageSurfaceGetHeight img
 
@@ -177,7 +177,7 @@ chunk ChunkEmpty cfg = return spaceV
 chunk (ChunkMusic x) cfg = return $ alignTop (music x cfg)
 chunk (ChunkMarkup x) cfg = return $ alignBottom (markup x cfg)
 chunk (ChunkBoth a b) cfg = return $ alignBottom (music a cfg `topOf` fixh (cfg ^. chordSpacing) spaceV `topOf` markup b cfg)
-chunk (ChunkExt ExtLily src) cfg = fixedWidthImage <$> generateLily src
+chunk (ChunkExt (ExtLily _) src) cfg = fixedWidthImage <$> generateLily src
 
 music :: (MonadIO f) => Music TonalChord -> LayoutConfig -> CairoWidget (F Dim) (F Dim) f
 music (MusicChord a) = chord a

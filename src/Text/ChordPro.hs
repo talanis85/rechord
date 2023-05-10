@@ -60,7 +60,8 @@ chunk = try chunkExtLily
 chunkExtLily = do
     string "<lily>"
     source <- manyTill anyChar (try (string "</lily>"))
-    return $ ChunkExt ExtLily source
+    scale <- getState
+    return $ ChunkExt (ExtLily scale) source
 
 chunkMusicLyric = do
     mus <- music
