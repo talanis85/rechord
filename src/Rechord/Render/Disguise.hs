@@ -17,12 +17,17 @@ import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.Trans
 import Control.Lens
-import Data.ChordPro
-import Data.Music.Tonal
+import Data.Char (toLower)
+import Data.List (intercalate)
 import Control.Monad (forM_)
 import qualified Data.Text as Text
 
 import Rechord.Render.Ext
+import Rechord.Render.Disguise.Notes
+
+import Data.ChordPro
+import Data.Chord
+import Data.Pitch
 
 data LayoutFont = LayoutFont
     { _fontSize :: Double
@@ -40,6 +45,8 @@ data LayoutConfig = LayoutConfig
     , _headerFont :: LayoutFont
     , _lineSpacing :: Double
     , _chordSpacing :: Double
+    , _voiceSpacing :: Double
+    , _voiceSize :: Double
     , _barWidth :: Double
     , _paragraphSpacing :: Double
     , _chunkSpacing :: Double
@@ -138,6 +145,8 @@ defaultLayoutConfig = LayoutConfig
         }
     , _lineSpacing = 6.0
     , _chordSpacing = 3.0
+    , _voiceSpacing = 3.0
+    , _voiceSize = 40.0
     , _barWidth = 5.0
     , _paragraphSpacing = 20.0
     , _chunkSpacing = 3.0
@@ -159,50 +168,72 @@ emptyWidget = FixedWidget $ pure (0, 0, return ())
 
 alignBottom x = space `topOf` x
 
-chunkSize :: LayoutConfig -> Chunk TonalChord -> IO Double
+chunkSize :: LayoutConfig -> Chunk -> IO Double
 chunkSize cfg c = case c of
-    ChunkEmpty             -> return 0.0
-    ChunkMusic music       -> return $ cfg ^. chordFont ^. fontSize
-    ChunkMarkup lyrics     -> return $ cfg ^. lyricsFont ^. fontSize
-    ChunkBoth chord lyrics -> return $ (cfg ^. chordFont ^. fontSize) + (cfg ^. lyricsFont ^. fontSize) + (cfg ^. chordSpacing)
-    ChunkExt (ExtLily _) src   -> do
+    ChunkEmpty -> return 0.0
+    Chunk mus voc lyr ->
+      let musSize = maybe (negate (cfg ^. chordSpacing)) (const (cfg ^. chordFont ^. fontSize)) mus
+          vocSize = maybe (negate (cfg ^. voiceSpacing)) (const (cfg ^. voiceSize)) voc
+          lyrSize = maybe 0.0 (const (cfg ^. lyricsFont ^. fontSize)) lyr
+      in return $ musSize + (cfg ^. chordSpacing) + vocSize + (cfg ^. voiceSpacing) + lyrSize
+    ChunkExt _ ExtLily src   -> do
       CairoImage img <- generateLily src
       (/ 6) <$> fromIntegral <$> imageSurfaceGetHeight img
 
-lineSize :: LayoutConfig -> Line TonalChord -> IO Double
+lineSize :: LayoutConfig -> Line -> IO Double
 lineSize cfg l = maximum <$> mapM (chunkSize cfg) l
 
-chunk :: (MonadIO f, MonadFix f) => Chunk TonalChord -> LayoutConfig -> IO (CairoWidget (F Dim) (V Dim) f)
-chunk ChunkEmpty cfg = return spaceV
-chunk (ChunkMusic x) cfg = return $ alignTop (music x cfg)
-chunk (ChunkMarkup x) cfg = return $ alignBottom (markup x cfg)
-chunk (ChunkBoth a b) cfg = return $ alignBottom (music a cfg `topOf` fixh (cfg ^. chordSpacing) spaceV `topOf` markup b cfg)
-chunk (ChunkExt (ExtLily _) src) cfg = fixedWidthImage <$> generateLily src
+chunk :: (MonadIO f, MonadFix f) => Bool -> Bool -> Bool -> Chunk -> LayoutConfig -> IO (CairoWidget (F Dim) (F Dim) f)
+chunk _ _ _ ChunkEmpty cfg = return $ fixh 0 spaceV
+chunk hasChords hasVoices hasLyrics (Chunk mus voc lyr) cfg = do
+  let vocPart = case (hasVoices, voc) of
+        (False, Nothing) -> spaceH
+        (False, Just voc') -> error "This should not happen"
+        (True, Nothing) -> fixh (cfg ^. voiceSize) emptyNotation
+        (True, Just voc') -> fixh (cfg ^. voiceSize) $ voiceNotation voc'
+  let musPart = case (hasChords, mus) of
+        (False, Nothing) -> emptyWidget
+        (False, Just mus') -> error "This should not happen"
+        (True, Nothing) -> fixh (cfg ^. chordFont ^. fontSize) spaceV
+        (True, Just mus') -> music mus' cfg
+  let lyrPart = case (hasLyrics, lyr) of
+        (False, Nothing) -> emptyWidget
+        (False, Just lyr') -> error "This should not happen"
+        (True, Nothing) -> fixh (cfg ^. lyricsFont ^. fontSize) spaceV
+        (True, Just lyr') -> markup lyr' cfg
+  return $ vocPart `topOf` (musPart `topOf` lyrPart)
+chunk _ _ _ (ChunkExt _ ExtLily src) cfg = do
+  ci@(CairoImage img) <- generateLily src
+  h <- imageSurfaceGetHeight img
+  return $ fixh (fromIntegral h / 6) (fixedWidthImage ci)
 
-music :: (MonadIO f) => Music TonalChord -> LayoutConfig -> CairoWidget (F Dim) (F Dim) f
+music :: (MonadIO f) => Music -> LayoutConfig -> CairoWidget (F Dim) (F Dim) f
 music (MusicChord a) = chord a
 music MusicBar = bar
 
-chord :: (MonadIO f) => TonalChord -> LayoutConfig -> CairoWidget (F Dim) (F Dim) f
+chord :: (MonadIO f) => Chord -> LayoutConfig -> CairoWidget (F Dim) (F Dim) f
 chord a cfg = FixedWidget $ do
   (tw, th) <- liftIO $ getTextSize (cfg ^. chordFont) (show a)
   return ( max (cfg ^. minChordWidth) tw
          , cfg ^. chordFont ^. fontSize
          , do
+           moveTo 0 th
            setFont (cfg ^. chordFont)
            chordPath cfg (show a)
            fill
          )
 
-bar :: (Applicative f) => LayoutConfig -> CairoWidget (F Dim) (F Dim) f
-bar cfg = FixedWidget $
-  pure ( cfg ^. barWidth
-       , cfg ^. chordFont ^. fontSize
-       , do
-         setFont (cfg ^. chordFont)
-         textPath "|"
-         fill
-       )
+bar :: (MonadIO f) => LayoutConfig -> CairoWidget (F Dim) (F Dim) f
+bar cfg = FixedWidget $ do
+  (tw, th) <- liftIO $ getTextSize (cfg ^. chordFont) ("|")
+  return ( cfg ^. barWidth
+         , cfg ^. chordFont ^. fontSize
+         , do
+           moveTo 0 th
+           setFont (cfg ^. chordFont)
+           textPath "|"
+           fill
+         )
 
 markup' :: (MonadIO f) => String -> LayoutFont -> CairoWidget (F Dim) (F Dim) f
 markup' text font = FixedWidget $ do
@@ -210,6 +241,7 @@ markup' text font = FixedWidget $ do
   return ( tw
          , font ^. fontSize
          , do
+           moveTo 0 th
            setFont font
            textPath text
            fill
@@ -222,21 +254,37 @@ markup (TitleMarkup text) cfg = markup' (text ++ "   ") (cfg ^. markFont)
 title :: (MonadIO f) => String -> LayoutConfig -> CairoWidget (F Dim) (F Dim) f
 title text cfg = markup' text (cfg ^. titleFont)
 
-line :: (MonadIO f, MonadFix f) => Line TonalChord -> LayoutConfig -> IO (CairoWidget (F Dim) (F Dim) f)
-line chunks cfg = do
-  ls <- lineSize cfg chunks
-  fixh ls <$> foldl leftOf spaceV <$> mapM makeChunk chunks
-  where
-    makeChunk x = chunk x cfg
+lineHasLyrics :: Line -> Bool
+lineHasLyrics = any chunkHasLyrics
+  where chunkHasLyrics (Chunk _ _ (Just _)) = True
+        chunkHasLyrics _= False
 
-paragraph :: (MonadIO f, MonadFix f) => Paragraph TonalChord -> LayoutConfig -> IO (CairoWidget (F Dim) (F Dim) f)
+lineHasChords :: Line -> Bool
+lineHasChords = any chunkHasChords
+  where chunkHasChords (Chunk (Just _) _ _) = True
+        chunkHasChords _= False
+
+lineHasVoices :: Line -> Bool
+lineHasVoices = any chunkHasVoices
+  where chunkHasVoices (Chunk _ (Just _) _) = True
+        chunkHasVoices _ = False
+
+line :: (MonadIO f, MonadFix f) => Line -> LayoutConfig -> IO (CairoWidget (F Dim) (F Dim) f)
+line chunks cfg = do
+  lineWidget <- foldl leftOf (fixh 0 spaceV) <$>
+    mapM (makeChunk (lineHasChords chunks) (lineHasVoices chunks) (lineHasLyrics chunks)) chunks
+  return lineWidget
+  where
+    makeChunk hasChords hasVoices hasLyrics x = chunk hasChords hasVoices hasLyrics x cfg
+
+paragraph :: (MonadIO f, MonadFix f) => Paragraph -> LayoutConfig -> IO (CairoWidget (F Dim) (F Dim) f)
 paragraph lines cfg = foldl topOf emptyWidget <$> mapM makeLine lines
   where
     makeLine x = do
       l <- line x cfg
       return $ l `topOf` fixh (cfg ^. lineSpacing) spaceV
 
-renderCairoPDF :: LayoutConfig -> (Double, Double) -> FilePath -> String -> [String] -> Layout TonalChord -> IO ()
+renderCairoPDF :: LayoutConfig -> (Double, Double) -> FilePath -> String -> [String] -> Layout -> IO ()
 renderCairoPDF cfg (pw, ph) filename titleStr headers paragraphs = do
   let pw' = pw - cfg ^. pageMargin * 2
   let ph' = ph - cfg ^. pageMargin * 2

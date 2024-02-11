@@ -1,7 +1,6 @@
 flags: {}
 packages:
 - '.'
-- haScales/
 extra-deps:
 - git: "https://github.com/talanis85/disguise.git"
   commit: "8840e025f34469efd930f461a39a8d7177660626"
@@ -15,13 +14,13 @@ extra-deps:
 - pango-0.13.8.1
 resolver: lts-16.31
 nix:
-  # shell-file: stack.nix
-  packages:
-    - cairo
-    - gtk3
-    - zlib
-    - pango
-    - pkgconfig
-    - xorg.xorgproto
-    - xorg.libX11
-    - lilypond
+  shell-file: stack.nix
+    # packages:
+    #   - cairo
+    #   - gtk3
+    #   - zlib
+    #   - pango
+    #   - pkg-config
+    #   - xorg.xorgproto
+    #   - xorg.libX11
+    #   - lilypond

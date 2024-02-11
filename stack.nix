@@ -2,20 +2,23 @@
 with (import <nixpkgs> {});
 
 let
-  nixpkgs1809 = import (fetchTarball https://github.com/NixOS/nixpkgs/archive/refs/tags/18.09.tar.gz) {
+  pkgs = import (fetchTarball https://github.com/NixOS/nixpkgs/archive/refs/tags/22.05.tar.gz) {
     config = config // { allowBroken = true; };
   };
 
 in
-  nixpkgs1809.haskell.lib.buildStackProject {
-    ghc = nixpkgs1809.haskell.compiler.ghc802;
+  pkgs.haskell.lib.buildStackProject {
+    ghc = pkgs.haskell.compiler.ghc884;
     name = "rechord";
+    nativeBuildInputs = [ lilypond ];
     buildInputs = [
-      nixpkgs1809.pkgconfig
-      nixpkgs1809.cairo
-      nixpkgs1809.gnome3.gtk
-      nixpkgs1809.pango
-      nixpkgs1809.git
-      nixpkgs1809.zlib
+      pkgs.pkgconfig
+      pkgs.cairo
+      pkgs.gtk3
+      pkgs.pango
+      pkgs.git
+      pkgs.zlib
+      pkgs.xorg.xorgproto
+      pkgs.xorg.libX11
     ];
   }

@@ -10,10 +10,8 @@ import System.IO (hGetContents, hSetEncoding, IOMode (..), withFile, utf8)
 import System.IO.Error
 
 import Data.ChordPro
-import Data.Music.Scales
-import Data.Music.Tonal
+import Data.Pitch
 import Rechord.Render.Disguise
-import Rechord.Render.HTML
 import Text.ChordPro
 
 options :: ParserInfo (IO ())
@@ -34,7 +32,6 @@ commandP = hsubparser
   (  command "render"   (info (cmdRender  <$> argument str (metavar "INPUT")
                                           <*> argument str (metavar "OUTPUT")
                                           <*> maybeOption pitchP (short 'k' <> metavar "KEY")
-                                          <*> option auto (short 't' <> metavar "TRANSPOSITION" <> value 0)
                                           <*> option str (long "font" <> metavar "FONT" <> value "sans serif")
                                           <*> many (option str (short 'h' <> metavar "HEADER"))
                                           <*> option formatP (short 'f' <> metavar "FORMAT" <>  value FormatPdf))
@@ -53,31 +50,27 @@ queryP = hsubparser
                               (progDesc "Query the original key"))
   )
 
-pitchP :: ReadM Pitch
+pitchP :: ReadM PitchClass
 pitchP = maybeReader parsePitch
 
 formatP :: ReadM Format
 formatP = maybeReader formatP'
   where
-    formatP' "html" = Just FormatHtml
     formatP' "pdf" = Just FormatPdf
     formatP' _ = Nothing
 
-cmdRender :: FilePath -> FilePath -> Maybe Pitch -> Int -> String -> [String] -> Format -> IO ()
-cmdRender input output pitch transposition font headers format = do
+cmdRender :: FilePath -> FilePath -> Maybe PitchClass -> String -> [String] -> Format -> IO ()
+cmdRender input output pitch font headers format = do
   withFile input ReadMode $ \fh -> do
     hSetEncoding fh utf8
     f <- hGetContents fh
 
     case parseChordPro f of
         Right (o, k, p) -> do
-          let key = TonalScale (fromMaybe (tscaleRoot k) pitch) (tscaleScale k)
+          let p' = case pitch of
+                     Nothing -> p
+                     Just pitch' -> transposeLayout (Pitch k 0 <-> Pitch pitch' 0) p
           case format of
-            FormatHtml ->
-              renderHTML
-                output
-                (Map.findWithDefault "NO TITLE" "t" o)
-                (bake key p)
             FormatPdf -> do
               let layout = withFont font defaultLayoutConfig
               renderCairoPDF
@@ -86,7 +79,7 @@ cmdRender input output pitch transposition font headers format = do
                 output
                 (Map.findWithDefault "NO TITLE" "t" o)
                 headers
-                (bake key p)
+                p'
         Left e' -> error $ "Error parsing: " ++ (show e')
 
 cmdParse :: FilePath -> IO ()
@@ -97,14 +90,14 @@ cmdParse input = do
 
     case parseChordPro f of
       Right (o, k, p) -> do
-        prettyPrintChordPro (bake k p)
+        prettyPrintChordPro p
       Left e' -> error $ "Error parsing: " ++ (show e')
 
 cmdQueryKey :: FilePath -> IO ()
 cmdQueryKey fp = do
   f <- readFile fp
   case parseChordPro f of
-    Right (o, k, p) -> putStrLn $ show (tscaleRoot k)
+    Right (o, k, p) -> putStrLn $ show k
     Left e -> error $ "Error parsing: " ++ (show e)
 
 main :: IO ()
