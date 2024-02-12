@@ -78,6 +78,7 @@ cmdRender input output pitch font headers format = do
                 paperSizeA4
                 output
                 (Map.findWithDefault "NO TITLE" "t" o)
+                (Map.findWithDefault "" "st" o)
                 headers
                 p'
         Left e' -> error $ "Error parsing: " ++ (show e')

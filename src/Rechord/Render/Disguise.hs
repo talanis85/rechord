@@ -146,7 +146,7 @@ defaultLayoutConfig = LayoutConfig
         , _fontColor = (0.0, 0.0, 0.0)
         }
     , _headerFont = LayoutFont
-        { _fontSize = 13.0
+        { _fontSize = 11.0
         , _fontFamily = "sans-serif"
         , _fontWeight = FontWeightNormal
         , _fontSlant = FontSlantNormal
@@ -282,6 +282,9 @@ paragraphTitle text cfg = markup' text (cfg ^. paragraphFont)
 title :: (MonadIO f) => String -> LayoutConfig -> CairoWidget (F Dim) (F Dim) f
 title text cfg = markup' text (cfg ^. titleFont)
 
+subtitle :: (MonadIO f) => String -> LayoutConfig -> CairoWidget (F Dim) (F Dim) f
+subtitle text cfg = markup' text (cfg ^. headerFont)
+
 lineHasLyrics :: [Chunk] -> Bool
 lineHasLyrics = any chunkHasLyrics
   where chunkHasLyrics (Chunk _ _ (Just _)) = True
@@ -316,13 +319,13 @@ paragraph lines cfg = foldl topOf spaceH <$> mapM makeLine lines
     makeLine (LineRef t) = do
       return $ Disguise.Cairo.fill (RGB 0.9 0.9 0.9) $ alignLeft $ paragraphTitle ("→ " ++ t) cfg
 
-renderCairoPDF :: LayoutConfig -> (Double, Double) -> FilePath -> String -> [String] -> Layout -> IO ()
-renderCairoPDF cfg (pw, ph) filename titleStr headers paragraphs = do
+renderCairoPDF :: LayoutConfig -> (Double, Double) -> FilePath -> String -> String -> [String] -> Layout -> IO ()
+renderCairoPDF cfg (pw, ph) filename titleStr subtitleStr headers paragraphs = do
   let pw' = pw - cfg ^. pageMargin * 2
   let ph' = ph - cfg ^. pageMargin * 2
 
   let header = fixw pw' $
-        alignLeft (title titleStr cfg)
+        tabularH' [alignLeft (title titleStr cfg), space `leftOf` subtitle subtitleStr cfg]
         `topOf`
         fixh (cfg ^. titleSpacing) space
 
