@@ -50,7 +50,9 @@ lineTitle = do
     tit <- many1 (noneOf ">")
     char '>'
     newline
-    return $ LineTitle tit
+    if tit == "lily"
+       then fail "lilypond block"
+       else return $ LineTitle tit
 
 chunk = try chunkExtLily
         <|>
