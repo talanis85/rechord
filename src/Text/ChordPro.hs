@@ -30,10 +30,19 @@ cpFile = do
 
 paragraph = many line
 
-line = do
+line = try lineTitle <|> lineChunks
+
+lineChunks = do
     chunks <- many1 chunk
     newline
-    return chunks
+    return $ LineChunks chunks
+
+lineTitle = do
+    char '<'
+    tit <- many1 (noneOf ">")
+    char '>'
+    newline
+    return $ LineTitle tit
 
 chunk = try chunkExtLily
         <|>

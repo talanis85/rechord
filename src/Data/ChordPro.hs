@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 module Data.ChordPro
     ( Chunk (..), Music (..)
-    , Line, Paragraph, Markup (..)
+    , Line (..), Paragraph, Markup (..)
     , ExtType (..)
     , Layout
     , transposeLayout
@@ -19,7 +19,7 @@ import Data.Pitch
 
 type Layout = [Paragraph]
 type Paragraph = [Line]
-type Line = [Chunk]
+data Line = LineTitle String | LineChunks [Chunk]
 data Chunk = Chunk (Maybe Music) (Maybe [(Int, Pitch)]) (Maybe Markup)
              | ChunkExt PitchClass ExtType String
              | ChunkEmpty
@@ -35,8 +35,12 @@ data ExtType = ExtLily
 
 type Option = (String, String)
 
+mapLineChunks :: (Chunk -> Chunk) -> Line -> Line
+mapLineChunks f (LineChunks cs) = LineChunks (map f cs)
+mapLineChunks _ x = x
+
 transposeLayout :: Directional Interval -> Layout -> Layout
-transposeLayout i x = map (map (map (transposeChunk i))) x
+transposeLayout i x = map (map (mapLineChunks (transposeChunk i))) x
 
 transposeChunk :: Directional Interval -> Chunk -> Chunk
 transposeChunk i x = case x of
@@ -73,9 +77,11 @@ prettyPrintChordPro paras = mapM_ prettyPrintParagraph paras
     prettyPrintParagraph p = do
       putStrLn "PARAGRAPH"
       mapM_ prettyPrintLine p
-    prettyPrintLine l = do
+    prettyPrintLine (LineChunks l) = do
       putStrLn "  LINE"
       mapM_ prettyPrintChunk l
+    preetyPrintLine (LineTitle t) = do
+      putStrLn $ "  LINE <" ++ t ++ ">"
     prettyPrintChunk c = do
       putStr "    CHUNK: "
       putStrLn (show c)
