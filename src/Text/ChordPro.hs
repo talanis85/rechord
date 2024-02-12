@@ -30,12 +30,20 @@ cpFile = do
 
 paragraph = many line
 
-line = try lineTitle <|> lineChunks
+line = try lineRef <|> try lineTitle <|> lineChunks
 
 lineChunks = do
     chunks <- many1 chunk
     newline
     return $ LineChunks chunks
+
+lineRef = do
+    char '<'
+    char '@'
+    tit <- many1 (noneOf ">")
+    char '>'
+    newline
+    return $ LineRef tit
 
 lineTitle = do
     char '<'

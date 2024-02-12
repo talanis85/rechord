@@ -181,6 +181,7 @@ getFontSize font = withImageSurface FormatA1 100 100 $ \s -> renderWith s $ do
 emptyWidget :: (Applicative f) => CairoWidget (F Dim) (F Dim) f
 emptyWidget = FixedWidget $ pure (0, 0, return ())
 
+{-
 chunkSize :: LayoutConfig -> Chunk -> IO Double
 chunkSize cfg c = case c of
     ChunkEmpty -> return 0.0
@@ -196,6 +197,8 @@ chunkSize cfg c = case c of
 lineSize :: LayoutConfig -> Line -> IO Double
 lineSize cfg (LineChunks cs) = maximum <$> mapM (chunkSize cfg) cs 
 lineSize cfg (LineTitle t) = return $ cfg ^. markFont ^. fontSize
+lineSize cfg (LineTitle t) = return $ cfg ^. markFont ^. fontSize
+-}
 
 chunk :: (MonadIO f, MonadFix f) => Bool -> Bool -> Bool -> Chunk -> LayoutConfig -> IO (CairoWidget (F Dim) (F Dim) f)
 chunk _ _ _ ChunkEmpty cfg = return $ fixh 0 spaceV
@@ -310,6 +313,8 @@ paragraph lines cfg = foldl topOf spaceH <$> mapM makeLine lines
       return $ alignLeft $ l `topOf` fixh (cfg ^. lineSpacing) spaceV
     makeLine (LineTitle t) = do
       return $ Disguise.Cairo.fill (RGB 0.9 0.9 0.9) $ alignLeft $ paragraphTitle t cfg
+    makeLine (LineRef t) = do
+      return $ Disguise.Cairo.fill (RGB 0.9 0.9 0.9) $ alignLeft $ paragraphTitle ("→ " ++ t) cfg
 
 renderCairoPDF :: LayoutConfig -> (Double, Double) -> FilePath -> String -> [String] -> Layout -> IO ()
 renderCairoPDF cfg (pw, ph) filename titleStr headers paragraphs = do

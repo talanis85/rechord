@@ -19,7 +19,7 @@ import Data.Pitch
 
 type Layout = [Paragraph]
 type Paragraph = [Line]
-data Line = LineTitle String | LineChunks [Chunk]
+data Line = LineTitle String | LineRef String | LineChunks [Chunk]
 data Chunk = Chunk (Maybe Music) (Maybe [(Int, Pitch)]) (Maybe Markup)
              | ChunkExt PitchClass ExtType String
              | ChunkEmpty
@@ -82,6 +82,8 @@ prettyPrintChordPro paras = mapM_ prettyPrintParagraph paras
       mapM_ prettyPrintChunk l
     preetyPrintLine (LineTitle t) = do
       putStrLn $ "  LINE <" ++ t ++ ">"
+    preetyPrintLine (LineRef t) = do
+      putStrLn $ "  LINE <@" ++ t ++ ">"
     prettyPrintChunk c = do
       putStr "    CHUNK: "
       putStrLn (show c)
