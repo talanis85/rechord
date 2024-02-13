@@ -325,7 +325,9 @@ renderCairoPDF cfg (pw, ph) filename titleStr subtitleStr headers paragraphs = d
   let ph' = ph - cfg ^. pageMargin * 2
 
   let header = fixw pw' $
-        tabularH' [alignLeft (title titleStr cfg), space `leftOf` subtitle subtitleStr cfg]
+        alignLeft (title titleStr cfg)
+        `topOf`
+        (space `leftOf` subtitle subtitleStr cfg)
         `topOf`
         fixh (cfg ^. titleSpacing) space
 
