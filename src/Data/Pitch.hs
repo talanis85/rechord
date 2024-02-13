@@ -79,7 +79,7 @@ pitchPosition (Pitch (PitchClass base acc) oct) =
 pitchAuxLinesTreble :: Pitch -> Int
 pitchAuxLinesTreble p
   | pitchPosition p > 0 && pitchPosition p < 12 = 0
-  | pitchPosition p <= 0 = (pitchPosition p `div` 2)
+  | pitchPosition p <= 0 = (negate (abs (pitchPosition p) `div` 2) - 1)
   | pitchPosition p >= 12 = (pitchPosition p - 10) `div` 2
 
 data Interval = Interval Natural Int
