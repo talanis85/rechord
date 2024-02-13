@@ -53,6 +53,7 @@ data LayoutConfig = LayoutConfig
     , _paragraphSpacing :: Double
     , _chunkSpacing :: Double
     , _minChordWidth :: Double
+    , _minVoiceWidth :: Double
     , _pageMargin :: Double
     , _titleSpacing :: Double
     , _headerSpacing :: Double
@@ -160,6 +161,7 @@ defaultLayoutConfig = LayoutConfig
     , _paragraphSpacing = 20.0
     , _chunkSpacing = 3.0
     , _minChordWidth = 40.0
+    , _minVoiceWidth = 30.0
     , _pageMargin = 60.0
     , _titleSpacing = 15.0
     , _headerSpacing = 6.0
@@ -218,7 +220,8 @@ chunk hasChords hasVoices hasLyrics (Chunk mus voc lyr) cfg = do
         (False, Just lyr') -> error "This should not happen"
         (True, Nothing) -> fixh (cfg ^. lyricsFont ^. fontSize) spaceV
         (True, Just lyr') -> markup lyr' cfg
-  return $ vocPart `topOf` (musPart `topOf` lyrPart)
+  let spacer = if hasVoices then fixw (cfg ^. minVoiceWidth) spaceH else emptyWidget
+  return $ vocPart `topOf` (spacer `topOf` (musPart `topOf` lyrPart))
 chunk _ _ _ (ChunkExt _ ExtLily src) cfg = do
   ci@(CairoImage img) <- generateLily src
   h <- imageSurfaceGetHeight img
