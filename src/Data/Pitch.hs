@@ -14,6 +14,8 @@ module Data.Pitch
   , Directional (..)
   , (<+>)
   , (<->)
+  , eitherDirection
+  , intervalBase
   ) where
 
 import Numeric.Natural
@@ -83,6 +85,9 @@ pitchAuxLinesTreble p
 data Interval = Interval Natural Int
   deriving (Eq, Show)
 
+intervalBase :: Interval -> Natural
+intervalBase (Interval x _) = x
+
 intervalPerfect1 = Interval 0 0
 
 instance Semigroup Interval where
@@ -93,6 +98,10 @@ instance Monoid Interval where
 
 data Directional a = Up a | Down a
   deriving (Eq, Show)
+
+eitherDirection :: Directional a -> a
+eitherDirection (Up x) = x
+eitherDirection (Down x) = x
 
 flipDirection :: Directional a -> Directional a
 flipDirection (Up x) = Down x
@@ -160,7 +169,10 @@ intervalDistance p1@(Pitch (PitchClass base1 acc1) oct1) p2@(Pitch (PitchClass b
 intervalDistance' :: Pitch -> Pitch -> Interval
 intervalDistance' p1@(Pitch (PitchClass base1 acc1) oct1) p2@(Pitch (PitchClass base2 acc2) oct2)
   | p1 == p2 = intervalPerfect1
-  | oct1 < oct2 = Interval 7 12 <> intervalDistance' p1 (Pitch (PitchClass base2 acc2) (oct2 - 1))
+  | oct1 < oct2 = case base2 of
+                    C -> Interval 1 1 <> intervalDistance' p1 (Pitch (PitchClass B acc2) (oct2 - 1))
+                    F -> Interval 1 1 <> intervalDistance' p1 (Pitch (PitchClass E acc2) oct2)
+                    _ -> Interval 1 2 <> intervalDistance' p1 (Pitch (PitchClass (pitchBasePred base2) acc2) oct2)
   | base1 < base2 = let i = case base2 of
                               F -> Interval 1 1
                               C -> Interval 1 1

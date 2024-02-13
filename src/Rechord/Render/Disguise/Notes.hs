@@ -74,7 +74,14 @@ voiceNotation notes = FlowWidget $ \w h -> do
       save
       let y = fromIntegral (pitchPosition pitch) * (sysh / 8.0)
       scale noteEllipsisFactor 1
-      translate (sysh / 4.0) (baseline - y)
+      accPos <- if any (\(_, pitch') -> intervalBase (eitherDirection (pitch' <-> pitch)) == 1) notes
+         && even (pitchPosition pitch)
+         then do
+              translate (sysh / 4.0 + sysh / 8.0) (baseline - y)
+              return (sysh / 4.0)
+         else do
+              translate (sysh / 4.0) (baseline - y)
+              return 0
       rotate (pi / 4)
       scale 0.7 1.1
       arc 0 0 (sysh / 8.0) 0 (2 * pi)
@@ -83,13 +90,13 @@ voiceNotation notes = FlowWidget $ \w h -> do
 
       let acc = pitchAccidental pitch
       when (acc > 0) $ do
-        moveTo (negate (fromIntegral acc * sysh / 4.0)) (baseline - y + sysh / 8.0)
+        moveTo (negate (fromIntegral acc * sysh / 4.0) - accPos) (baseline - y + sysh / 8.0)
         setFontSize (noteWidth * 1.5)
         textPath (take acc (repeat '#'))
         fill
 
       when (acc < 0) $ do
-        moveTo (negate (fromIntegral (abs acc) * sysh / 4.0)) (baseline - y + sysh / 8.0)
+        moveTo (negate (fromIntegral (abs acc) * sysh / 4.0) - accPos) (baseline - y + sysh / 8.0)
         setFontSize (noteWidth * 1.5)
         textPath (take (abs acc) (repeat 'b'))
         fill
