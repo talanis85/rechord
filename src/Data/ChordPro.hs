@@ -6,6 +6,7 @@ module Data.ChordPro
     , ExtType (..)
     , Layout
     , transposeLayout
+    , transposeChord
     , prettyPrintChordPro
     ) where
 

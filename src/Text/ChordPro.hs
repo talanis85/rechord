@@ -2,6 +2,7 @@
 module Text.ChordPro
     ( parseChordPro
     , parsePitch
+    , parseChord
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
@@ -19,6 +20,10 @@ parsePitch input = case parse pitchParser "" input of
             base <- chordBase
             mod <- chordMod
             return $ PitchClass base mod
+
+parseChord input = case parse absChordName "" input of
+                     Left e -> Left (show e)
+                     Right r -> Right r
 
 cpFile = do
     options <- many sheetOption
@@ -134,8 +139,9 @@ musicChord = do
 
 chord = absChord <* many (oneOf " \t")
 
-absChord = do
-    char '['
+absChord = char '[' *> absChordName <* char ']'
+
+absChordName = do
     base <- chordBase
     modifier <- chordMod
     t1 <- many (noneOf "1234567/]")
@@ -145,7 +151,6 @@ absChord = do
                         slBase <- chordBase
                         slModifier <- chordMod
                         return $ PitchClass slBase slModifier
-    char ']'
     return (Chord (PitchClass base modifier) slash (ChordType t1 t2))
 
 {-

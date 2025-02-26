@@ -20,5 +20,6 @@ in
       pkgs.zlib
       pkgs.xorg.xorgproto
       pkgs.xorg.libX11
+      pkgs.haskellPackages.haskell-language-server
     ];
   }

@@ -4,12 +4,14 @@ import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)
 import Data.Monoid
 import Development.GitRev
+import Numeric.Natural
 import Options.Applicative
 import System.FilePath
 import System.IO (hGetContents, hSetEncoding, IOMode (..), withFile, utf8)
 import System.IO.Error
 
 import Data.ChordPro
+import Data.Chord
 import Data.Pitch
 import Rechord.Render.Disguise
 import Text.ChordPro
@@ -39,6 +41,10 @@ commandP = hsubparser
   <> command "parse"    (info (cmdParse <$> argument str (metavar "INPUT"))
                               (progDesc "Only parse (for debugging)"))
   <> command "query"    (info queryP (progDesc "Query information about a sheet"))
+  <> command "transpose" (info (cmdTranspose <$> argument (eitherReader parseChord) (metavar "CHORD")
+                                             <*> argument auto (metavar "INTERVAL")
+                                             <*> argument auto (metavar "INTERVAL"))
+                               (progDesc "Transpose a chord"))
   )
 
 maybeOption :: ReadM a -> Mod OptionFields (Maybe a) -> Parser (Maybe a)
@@ -100,6 +106,10 @@ cmdQueryKey fp = do
   case parseChordPro f of
     Right (o, k, p) -> putStrLn $ show k
     Left e -> error $ "Error parsing: " ++ (show e)
+
+cmdTranspose :: Chord -> Natural -> Int -> IO ()
+cmdTranspose chord ia ib = do
+  print (transposeChord (Up (Interval ia ib)) chord)
 
 main :: IO ()
 main = do
