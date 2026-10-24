@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Rechord.Render.Disguise
   ( renderCairoPDF
   , defaultLayoutConfig
