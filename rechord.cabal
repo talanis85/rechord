@@ -37,5 +37,4 @@ executable rechord
                      , parsec
                      , process
                      , text
-  default-extensions:  TemplateHaskell
   hs-source-dirs:      src
